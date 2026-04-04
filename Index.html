@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note Management System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container" id="main-menu">
+        <h1>Main Menu</h1>
+        <button id="create-class">Create a Class</button>
+        <button id="delete-class">Delete a Class</button>
+        <button id="see-classes">See Classes</button>
+    </div>
+
+    <div class="container hidden" id="class-selection">
+        <h2>Select a Class</h2>
+        <input type="text" id="class-search" placeholder="Search for classes...">
+        <div id="class-buttons"></div>
+        <button id="back-to-main">Back</button>
+    </div>
+
+    <div class="container hidden" id="notes-menu">
+        <h2 id="class-title">Class </h2>
+        <button id="picture-notes">Picture Notes</button>
+        <button id="text-notes">Text Notes</button>
+        <button id="back-to-classes">Back</button>
+    </div>
+
+    <div class="container hidden" id="text-notes-menu">
+        <h2>Text Notes</h2>
+        <input type="text" id="note-search" placeholder="Search for notes...">
+        <textarea id="text-note-input" rows="4" cols="50" placeholder="Enter your note here..."></textarea>
+        <button id="save-text-note">Save</button>
+        <button id="edit-text-note">Edit</button>
+        <button id="delete-text-note">Delete</button>
+        <button id="sort-text-notes">Sort Notes</button>
+        <ul id="text-notes-list"></ul>
+        <button id="back-to-notes">Back</button>
+    </div>
+
+    <div class="container hidden" id="picture-notes-menu">
+        <h2>Picture Notes</h2>
+        <input type="file" id="image-input" accept="image/*">
+        <button id="save-image-note">Upload Image</button>
+        <ul id="picture-notes-list"></ul>
+        <button id="back-to-notes-pictures">Back</button>
+    </div>
+
+    
+    <div id="photo-modal" class="modal hidden">
+        <span class="close">&times;</span>
+        <img id="modal-img" class="modal-content">
+        <div id="caption"></div>
+        <button id="zoom-in">+</button>
+        <button id="zoom-out">-</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
