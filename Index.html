@@ -36,6 +36,7 @@
         <button id="edit-text-note">Edit</button>
         <button id="delete-text-note">Delete</button>
         <button id="sort-text-notes">Sort Notes</button>
+        <button id="start-reel-btn">Start Doomscroll Mode</button>
         <ul id="text-notes-list"></ul>
         <button id="back-to-notes">Back</button>
     </div>
@@ -55,6 +56,16 @@
         <div id="caption"></div>
         <button id="zoom-in">+</button>
         <button id="zoom-out">-</button>
+    </div>
+
+    <div id="reel-container" class="hidden">
+        <button id="close-reel-btn">✖ Close</button>
+    
+        <video id="reel-video" autoplay loop muted playsinline>
+            <source src="parkour.mp4" type="video/mp4">
+        </video>
+
+        <div id="reel-text-overlay"></div>
     </div>
 
     <script src="script.js"></script>

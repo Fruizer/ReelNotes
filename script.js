@@ -295,3 +295,112 @@ window.onclick = function(event) {
         modal.style.display = "none";
     }
 }
+
+// --- DOM ELEMENTS FOR REEL MODE ---
+const startReelBtn = document.getElementById('start-reel-btn');
+const closeReelBtn = document.getElementById('close-reel-btn');
+const reelContainer = document.getElementById('reel-container');
+const reelTextOverlay = document.getElementById('reel-text-overlay');
+
+let speechInstance = null;
+
+// --- AI TUTOR LOGIC ---
+let GEMINI_API_KEY = localStorage.getItem("geminiApiKey");
+
+if (!GEMINI_API_KEY) {
+    GEMINI_API_KEY = prompt("Developer Mode: Please enter your Gemini API Key to enable the AI Tutor:");
+    if (GEMINI_API_KEY) {
+        localStorage.setItem("geminiApiKey", GEMINI_API_KEY);
+    } else {
+        alert("AI Tutor disabled. Refresh and enter a key to use this feature.");
+    }
+}
+
+async function generateTutorScript(rawNotes) {
+    const prompt = `You are a fun, energetic tutor making a short-form video. Take the following class notes and rewrite them into a punchy, easy-to-understand tutor script. Explain the concepts simply yet infoirmative like you're talking to a friend. Do NOT use emojis, asterisks, hashtags, or formatting. Just output the plain text script for a text-to-speech engine. Here are the notes: ${rawNotes}`;
+    
+    try {
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+        
+        const data = await response.json();
+        
+        // Error
+        if (!response.ok) {
+            console.error("Full Google Error:", data);
+            return `API REJECTED: ${data.error.message}`; 
+        }
+
+        return data.candidates[0].content.parts[0].text;
+        
+    } catch (error) {
+        console.error("Network Error:", error);
+        return `NETWORK ERROR: Are you offline or is the browser blocking it?`;
+    }
+}
+
+// --- REEL MODE ---
+startReelBtn.addEventListener('click', async function() {
+    // --- THE CHROME UNLOCKER HACK ---
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); 
+
+    reelContainer.classList.remove('hidden');
+    
+    if (!textNotes[currentClass] || textNotes[currentClass].length === 0) {
+        reelTextOverlay.innerText = "NO NOTES FOUND";
+        return;
+    }
+
+    // 1. Grab raw notes and show loading screen
+    const rawScriptText = textNotes[currentClass].join(" ");
+    reelTextOverlay.innerText = "AI IS THINKING...";
+    reelTextOverlay.style.animation = 'none';
+
+    // 2. Wait for AI to rewrite the notes
+    const aiScript = await generateTutorScript(rawScriptText);
+    console.log("THE AI WROTE THIS SCRIPT:", aiScript);
+
+    const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
+
+    // 3. Setup the talking robot with the CLEANED script
+    speechInstance = new SpeechSynthesisUtterance(cleanScript);
+    speechInstance.rate = 1.3; 
+    speechInstance.pitch = 1;
+
+    // 4. Sync the text to pop up on screen
+    speechInstance.onboundary = function(event) {
+        if (event.name === 'word') {
+            const remainingText = cleanScript.substring(event.charIndex);
+            const match = remainingText.match(/^[\w'.-]+[!,?.]*/);
+            
+            if (match) {
+                const currentWord = match[0];
+                reelTextOverlay.innerText = currentWord.toUpperCase();
+                
+                reelTextOverlay.style.animation = 'none';
+                void reelTextOverlay.offsetWidth; 
+                reelTextOverlay.style.animation = 'wordPop 0.15s ease-out forwards';
+            }
+        }
+    };
+
+    speechInstance.onend = function() {
+        reelTextOverlay.innerText = "REEL FINISHED";
+    };
+
+    // 5. Speak! (Removed the cancel() so it doesn't instantly kill itself)
+    window.speechSynthesis.speak(speechInstance);
+});
+
+// --- REEL MODE CLOSE  ---
+closeReelBtn.addEventListener('click', function() {
+    reelContainer.classList.add('hidden');
+    window.speechSynthesis.cancel(); // Stop talking when closed
+    reelTextOverlay.innerText = "";
+});
