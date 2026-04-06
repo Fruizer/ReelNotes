@@ -3,79 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Note Management System</title>
+    <title>ReelNotes v2.0</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container" id="main-menu">
-    <h1>Subject Dashboard</h1>
-    
-    <div style="display: flex; justify-content: center; gap: 10px;">
-        <button id="create-class">Add Subject</button>
-        <button id="delete-class" class="delete">Remove Subject</button>
-    </div>
 
-    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+    <div class="container dark-container" id="main-menu">
 
-    <div id="subject-section">
-        <input type="text" id="class-search" placeholder="Search subjects...">
-        <div id="class-buttons" class="subject-grid">
+        <div class="top-nav">
+            <div class="brand-logo">ReelNotes</div>
+            <div class="user-profile">
+                <!-- Simple SVG icon for the user -->
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span>Username</span>
+            </div>
+        </div>
+  
+        <div class="dashboard-header">
+            <div>
+                <h1 class="glow-text">Subject Dashboard</h1>
+                <p class="subtitle">Select a subject to start the reel or manage contents.</p>
+            </div>
+            <div class="action-group" id="default-actions">
+                <button id="show-add-modal" class="btn-primary">+ Add Subject</button>
+                <button id="toggle-edit-mode" class="btn-ghost">Edit Dashboard</button>
+            </div>
+            <div class="action-group hidden" id="edit-actions">
+                <button id="delete-selected" class="btn-ghost-danger">Delete Selected (0)</button>
+                <button id="cancel-edit-mode" class="btn-ghost">Done</button>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" id="class-search" class="dark-input search-bar" placeholder="Search subjects...">
+        </div>
+
+        <div id="class-buttons" class="bento-grid">
             </div>
     </div>
-</div>
 
-    <div class="container hidden" id="class-selection">
-        <h2>Select a Class</h2>
-        <input type="text" id="class-search" placeholder="Search for classes...">
-        <div id="class-buttons"></div>
-        <button id="back-to-main">Back</button>
+    <div id="custom-add-modal" class="dark-overlay hidden">
+        <div class="dark-modal-box">
+            <h2>Add New Subject</h2>
+            <input type="text" id="new-subject-input" class="dark-input full-width" placeholder="e.g., Object Oriented Programming">
+            <div class="modal-buttons">
+                <button id="cancel-add" class="btn-ghost">Cancel</button>
+                <button id="confirm-add" class="btn-primary">Create</button>
+            </div>
+        </div>
     </div>
 
-    <div class="container hidden" id="notes-menu">
-        <h2 id="class-title">Class </h2>
-        <button id="picture-notes">Picture Notes</button>
-        <button id="text-notes">Text Notes</button>
-        <button id="back-to-classes">Back</button>
+    <div class="container dark-container hidden" id="notes-menu">
+        <h1 id="class-title" class="glow-text">Class Name</h1>
+        <button id="back-to-classes" class="btn-ghost" style="margin-bottom: 20px;">← Back to Dashboard</button>
+        <div class="bento-grid">
+            <button id="text-notes" class="subject-btn style-text">Text Notes</button>
+            <button id="picture-notes" class="subject-btn style-pic">Picture Notes</button>
+        </div>
     </div>
 
-    <div class="container hidden" id="text-notes-menu">
-        <h2>Text Notes</h2>
-        <input type="text" id="note-search" placeholder="Search for notes...">
-        <textarea id="text-note-input" rows="4" cols="50" placeholder="Enter your note here..."></textarea>
-        <button id="save-text-note">Save</button>
-        <button id="edit-text-note">Edit</button>
-        <button id="delete-text-note">Delete</button>
-        <button id="sort-text-notes">Sort Notes</button>
-        <button id="start-reel-btn">Start Doomscroll Mode</button>
-        <ul id="text-notes-list"></ul>
-        <button id="back-to-notes">Back</button>
+    <div class="container dark-container hidden" id="text-notes-menu">
+        <h2 class="glow-text">Text Notes</h2>
+        <button id="back-to-notes" class="btn-ghost">← Back</button>
+        
+        <div style="margin-top: 20px;">
+            <textarea id="text-note-input" class="dark-input full-width" rows="4" placeholder="Type your note here..."></textarea>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button id="save-text-note" class="btn-primary">Save Note</button>
+                <button id="edit-text-note" class="btn-ghost">Edit Selected</button>
+                <button id="delete-text-note" class="btn-ghost-danger">Delete Selected</button>
+            </div>
+        </div>
+
+        <input type="text" id="note-search" class="dark-input full-width" placeholder="Search notes..." style="margin-top: 20px;">
+        <button id="sort-text-notes" class="btn-ghost" style="margin-top: 10px;">Sort A-Z</button>
+        
+        <ul id="text-notes-list" class="dark-list"></ul>
+        
+        <button id="start-reel-btn" class="btn-primary huge-btn" style="width: 100%; margin-top: 20px;">START REEL MODE</button>
     </div>
 
-    <div class="container hidden" id="picture-notes-menu">
-        <h2>Picture Notes</h2>
-        <input type="file" id="image-input" accept="image/*">
-        <button id="save-image-note">Upload Image</button>
-        <ul id="picture-notes-list"></ul>
-        <button id="back-to-notes-pictures">Back</button>
+    <div class="container dark-container hidden" id="picture-notes-menu">
+        <h2 class="glow-text">Picture Notes</h2>
+        <button id="back-to-notes-pictures" class="btn-ghost">← Back</button>
+        <div style="margin-top: 20px;">
+            <input type="file" id="image-input" accept="image/*" class="dark-input">
+            <button id="save-image-note" class="btn-primary" style="margin-top: 10px;">Upload Image</button>
+        </div>
+        <ul id="picture-notes-list" class="picture-grid"></ul>
     </div>
 
-    
-    <div id="photo-modal" class="modal hidden">
+    <div id="photo-modal" class="modal">
         <span class="close">&times;</span>
-        <img id="modal-img" class="modal-content">
+        <img class="modal-content" id="modal-img">
         <div id="caption"></div>
-        <button id="zoom-in">+</button>
-        <button id="zoom-out">-</button>
+        <div class="modal-controls">
+            <button id="zoom-in" class="btn-primary">+</button>
+            <button id="zoom-out" class="btn-primary">-</button>
+        </div>
     </div>
 
     <div id="reel-container" class="hidden">
-        <button id="close-reel-btn">✖ Close</button>
-    
-        <video id="reel-video" autoplay loop muted playsinline>
+        <button id="close-reel-btn">X</button>
+        <video id="reel-video" autoplay loop muted>
             <source src="parkour.mp4" type="video/mp4">
         </video>
-
-        <div id="reel-text-overlay"></div>
+        <div id="reel-text-overlay">LOADING...</div>
     </div>
 
     <script src="script.js"></script>

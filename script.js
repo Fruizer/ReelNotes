@@ -1,5 +1,5 @@
+// --- INITIALIZATION & DATA MIGRATION ---
 const mainMenu = document.getElementById("main-menu");
-const classSelection = document.getElementById("class-selection");
 const notesMenu = document.getElementById("notes-menu");
 const textNotesMenu = document.getElementById("text-notes-menu");
 const pictureNotesMenu = document.getElementById("picture-notes-menu");
@@ -7,124 +7,184 @@ const classButtonsDiv = document.getElementById("class-buttons");
 const classSearchInput = document.getElementById("class-search");
 const noteSearchInput = document.getElementById("note-search");
 
-
-let subjects = JSON.parse(localStorage.getItem("subjects")) || [];
+// Data fallback: if 'subjects' is empty, check for 'classes' from your old version so you don't lose OOP!
+let subjects = JSON.parse(localStorage.getItem("subjects")) || JSON.parse(localStorage.getItem("classes")) || [];
 let textNotes = JSON.parse(localStorage.getItem("textNotes")) || {};
 let pictureNotes = JSON.parse(localStorage.getItem("pictureNotes")) || {};
-let currentClass = ""; 
+let currentClass = "";
 let selectedNoteIndex = null;
 
-window.onload = updateSubjectDisplay;
+// New Edit Mode State
+let isEditMode = false;
+let subjectsToDelete = new Set();
 
-document.getElementById("back-to-classes").addEventListener("click", function() {
+// Run immediately
+window.onload = () => {
+    // Save migrated data if needed
+    localStorage.setItem("subjects", JSON.stringify(subjects));
+    updateSubjectDisplay();
+};
+
+// --- V2.0 DASHBOARD LOGIC ---
+
+function updateSubjectDisplay() {
+    classButtonsDiv.innerHTML = "";
+    const searchText = classSearchInput.value.toLowerCase();
+    
+    subjects
+        .filter(s => s.toLowerCase().includes(searchText))
+        .forEach((subjectName) => {
+            const button = document.createElement("button");
+            button.innerText = subjectName;
+            button.className = "subject-btn"; 
+            
+            // Check if we are in edit mode
+            if (isEditMode) {
+                button.classList.add("edit-mode-active");
+                if (subjectsToDelete.has(subjectName)) {
+                    button.classList.add("selected-for-delete");
+                }
+            }
+
+            button.addEventListener("click", () => {
+                if (isEditMode) {
+                    // Toggle selection for deletion
+                    if (subjectsToDelete.has(subjectName)) {
+                        subjectsToDelete.delete(subjectName);
+                        button.classList.remove("selected-for-delete");
+                    } else {
+                        subjectsToDelete.add(subjectName);
+                        button.classList.add("selected-for-delete");
+                    }
+                    updateDeleteButtonText();
+                } else {
+                    // Normal mode: Open notes
+                    currentClass = subjectName;
+                    mainMenu.classList.add("hidden");
+                    notesMenu.classList.remove("hidden");
+                    document.getElementById("class-title").innerText = subjectName;
+                }
+            });
+            classButtonsDiv.appendChild(button);
+        });
+}
+
+classSearchInput.addEventListener("input", updateSubjectDisplay);
+
+// --- MODAL LOGIC (ADD SUBJECT) ---
+const addModal = document.getElementById("custom-add-modal");
+const newSubjectInput = document.getElementById("new-subject-input");
+
+document.getElementById("show-add-modal").addEventListener("click", () => {
+    addModal.classList.remove("hidden");
+    newSubjectInput.value = "";
+    newSubjectInput.focus();
+});
+
+document.getElementById("cancel-add").addEventListener("click", () => {
+    addModal.classList.add("hidden");
+});
+
+document.getElementById("confirm-add").addEventListener("click", () => {
+    const subjectName = newSubjectInput.value.trim();
+    if (subjectName && !subjects.includes(subjectName)) {
+        subjects.push(subjectName);
+        localStorage.setItem("subjects", JSON.stringify(subjects));
+        updateSubjectDisplay();
+        addModal.classList.add("hidden");
+    } else if (subjects.includes(subjectName)) {
+        alert("Subject already exists!");
+    }
+});
+
+// --- EDIT MODE LOGIC (DELETE MULTIPLE) ---
+const defaultActions = document.getElementById("default-actions");
+const editActions = document.getElementById("edit-actions");
+const deleteSelectedBtn = document.getElementById("delete-selected");
+
+function toggleEditMode() {
+    isEditMode = !isEditMode;
+    subjectsToDelete.clear();
+    
+    if (isEditMode) {
+        defaultActions.classList.add("hidden");
+        editActions.classList.remove("hidden");
+    } else {
+        defaultActions.classList.remove("hidden");
+        editActions.classList.add("hidden");
+    }
+    
+    updateDeleteButtonText();
+    updateSubjectDisplay();
+}
+
+function updateDeleteButtonText() {
+    deleteSelectedBtn.innerText = `Delete Selected (${subjectsToDelete.size})`;
+}
+
+document.getElementById("toggle-edit-mode").addEventListener("click", toggleEditMode);
+document.getElementById("cancel-edit-mode").addEventListener("click", toggleEditMode);
+
+document.getElementById("delete-selected").addEventListener("click", () => {
+    if (subjectsToDelete.size === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${subjectsToDelete.size} subject(s)? This will wipe all their notes.`)) {
+        subjects = subjects.filter(s => !subjectsToDelete.has(s));
+        
+        subjectsToDelete.forEach(sub => {
+            delete textNotes[sub];
+            delete pictureNotes[sub];
+        });
+        
+        localStorage.setItem("subjects", JSON.stringify(subjects));
+        localStorage.setItem("textNotes", JSON.stringify(textNotes));
+        localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
+        
+        toggleEditMode(); // Exit edit mode
+    }
+});
+
+
+// --- NAVIGATION LOGIC ---
+document.getElementById("back-to-classes").addEventListener("click", () => {
     notesMenu.classList.add("hidden");
     mainMenu.classList.remove("hidden");
 });
-
-document.getElementById("text-notes").addEventListener("click", function() {
+document.getElementById("text-notes").addEventListener("click", () => {
     notesMenu.classList.add("hidden");
     textNotesMenu.classList.remove("hidden");
     loadTextNotes();
-    console.log("Text notes menu opened");
 });
-
-document.getElementById("picture-notes").addEventListener("click", function() {
+document.getElementById("picture-notes").addEventListener("click", () => {
     notesMenu.classList.add("hidden");
     pictureNotesMenu.classList.remove("hidden");
     loadPictureNotes();
 });
-
-document.getElementById("back-to-notes").addEventListener("click", function() {
+document.getElementById("back-to-notes").addEventListener("click", () => {
     textNotesMenu.classList.add("hidden");
     notesMenu.classList.remove("hidden");
 });
-
-document.getElementById("back-to-notes-pictures").addEventListener("click", function() {
+document.getElementById("back-to-notes-pictures").addEventListener("click", () => {
     pictureNotesMenu.classList.add("hidden");
     notesMenu.classList.remove("hidden");
 });
 
-
-function updateSubjectDisplay() {
-    const displayDiv = document.getElementById("class-buttons");
-    displayDiv.innerHTML = "";
-    
-    const searchText = document.getElementById("class-search").value.toLowerCase();
-  
-    subjects
-        .filter(s => s.toLowerCase().includes(searchText))
-        .forEach(subjectName => {
-            const btn = document.createElement("button");
-            btn.innerText = subjectName;
-            btn.className = "subject-btn"; 
-            btn.addEventListener("click", () => {
-                currentClass = subjectName;
-                document.getElementById("main-menu").classList.add("hidden");
-                document.getElementById("notes-menu").classList.remove("hidden");
-                document.getElementById("class-title").innerText = subjectName;
-            });
-            displayDiv.appendChild(btn);
-        });
-}
-
-document.getElementById("class-search").addEventListener("input", updateSubjectDisplay);
-
-
-document.getElementById("create-class").addEventListener("click", function() {
-    const subjectName = prompt("Enter the name of the new subject:");
-    if (subjectName && !subjects.includes(subjectName)) {
-        subjects.push(subjectName);
-        localStorage.setItem("subjects", JSON.stringify(subjects));
-        updateSubjectDisplay(); 
-    } else if (subjects.includes(subjectName)) {
-        alert("Subject already exists.");
-    }
-});
-
-
-document.getElementById("delete-class").addEventListener("click", function() {
-    const subjectName = prompt("Enter the name of the subject to delete:");
-    if (subjectName && subjects.includes(subjectName)) {
-        const confirmDelete = confirm(`Are you sure you want to delete the subject "${subjectName}" and all its notes?`);
-        if (confirmDelete) {
-            subjects = subjects.filter(s => s !== subjectName);
-            delete textNotes[subjectName]; 
-            delete pictureNotes[subjectName]; 
-            localStorage.setItem("subjects", JSON.stringify(subjects));
-            localStorage.setItem("textNotes", JSON.stringify(textNotes));
-            localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
-            updateSubjectDisplay();
-        }
-    } else {
-        alert("Subject not found.");
-    }
-});
-
+// --- TEXT NOTES LOGIC ---
 const textNotesList = document.getElementById("text-notes-list");
-const saveTextNoteBtn = document.getElementById("save-text-note");
-const editTextNoteBtn = document.getElementById("edit-text-note");
-const deleteTextNoteBtn = document.getElementById("delete-text-note");
 const textNoteInput = document.getElementById("text-note-input");
-const sortTextNotesBtn = document.getElementById("sort-text-notes");
-
 
 function loadTextNotes() {
     textNotesList.innerHTML = "";
     const searchText = noteSearchInput.value.toLowerCase();
-    console.log("Search Text:", searchText); 
-
     if (textNotes[currentClass]) {
-        console.log("Text Notes for Current Class:", textNotes[currentClass]);
-        
-        const filteredNotes = textNotes[currentClass].filter(note => note.toLowerCase().includes(searchText));
-        console.log("Filtered Notes:", filteredNotes);
-
-        filteredNotes.forEach((note, index) => {
-            const li = document.createElement("li");
-            li.innerText = note;
-            li.addEventListener("click", () => selectNote(index));
-            textNotesList.appendChild(li);
-        });
+        textNotes[currentClass]
+            .filter(note => note.toLowerCase().includes(searchText))
+            .forEach((note, index) => {
+                const li = document.createElement("li");
+                li.innerText = note;
+                li.addEventListener("click", () => selectNote(index));
+                textNotesList.appendChild(li);
+            });
     }
 }
 
@@ -132,23 +192,17 @@ noteSearchInput.addEventListener("input", loadTextNotes);
 
 function selectNote(index) {
     selectedNoteIndex = index;
-    document.querySelectorAll("#text-notes-list li").forEach((li, i) => {
-        li.classList.toggle("selected", i === index);
-    });
+    document.querySelectorAll("#text-notes-list li").forEach((li, i) => li.classList.toggle("selected", i === index));
 }
 
-saveTextNoteBtn.addEventListener("click", function() {
+document.getElementById("save-text-note").addEventListener("click", () => {
     const note = textNoteInput.value.trim();
     if (note) {
         if (selectedNoteIndex !== null) {
-            // Edit the existing note
             textNotes[currentClass][selectedNoteIndex] = note;
             selectedNoteIndex = null;
         } else {
-            // Add a new note
-            if (!textNotes[currentClass]) {
-                textNotes[currentClass] = [];
-            }
+            if (!textNotes[currentClass]) textNotes[currentClass] = [];
             textNotes[currentClass].push(note);
         }
         localStorage.setItem("textNotes", JSON.stringify(textNotes));
@@ -157,51 +211,30 @@ saveTextNoteBtn.addEventListener("click", function() {
     }
 });
 
-editTextNoteBtn.addEventListener("click", function() {
-    if (selectedNoteIndex !== null) {
-        textNoteInput.value = textNotes[currentClass][selectedNoteIndex];
-    } else {
-        alert("Please select a note to edit.");
+document.getElementById("edit-text-note").addEventListener("click", () => {
+    if (selectedNoteIndex !== null) textNoteInput.value = textNotes[currentClass][selectedNoteIndex];
+    else alert("Select a note to edit.");
+});
+
+document.getElementById("delete-text-note").addEventListener("click", () => {
+    if (selectedNoteIndex !== null && confirm("Delete note?")) {
+        textNotes[currentClass].splice(selectedNoteIndex, 1);
+        localStorage.setItem("textNotes", JSON.stringify(textNotes));
+        loadTextNotes();
+        selectedNoteIndex = null;
     }
 });
 
-deleteTextNoteBtn.addEventListener("click", function() {
-    if (selectedNoteIndex !== null) {
-        const confirmDelete = confirm("Are you sure you want to delete this note?");
-        if (confirmDelete) {
-            textNotes[currentClass].splice(selectedNoteIndex, 1);
-            localStorage.setItem("textNotes", JSON.stringify(textNotes));
-            loadTextNotes();
-            selectedNoteIndex = null;
-        }
-    } else {
-        alert("Please select a note to delete.");
-    }
-});
-
-sortTextNotesBtn.addEventListener("click", function() {
+document.getElementById("sort-text-notes").addEventListener("click", () => {
     if (textNotes[currentClass]) {
-        bubbleSort(textNotes[currentClass]);
+        textNotes[currentClass].sort();
         localStorage.setItem("textNotes", JSON.stringify(textNotes));
         loadTextNotes();
     }
 });
 
-function bubbleSort(arr) {
-    let len = arr.length;
-    for (let i = 0; i < len; i++) {
-        for (let j = 0; j < len - 1 - i; j++) {
-            if (arr[j] > arr[j + 1]) {
-                let temp = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
-            }
-        }
-    }
-}
-
+// --- PICTURE NOTES LOGIC ---
 const pictureNotesList = document.getElementById("picture-notes-list");
-const saveImageNoteBtn = document.getElementById("save-image-note");
 const imageInput = document.getElementById("image-input");
 
 function loadPictureNotes() {
@@ -211,193 +244,116 @@ function loadPictureNotes() {
             const li = document.createElement("li");
             const img = document.createElement("img");
             img.src = imageSrc;
-            img.alt = "Picture Note";
             li.appendChild(img);
+            
             const deleteBtn = document.createElement("button");
             deleteBtn.innerText = "Delete";
+            deleteBtn.className = "btn-ghost-danger";
+            deleteBtn.style.marginTop = "5px";
             deleteBtn.addEventListener("click", () => deletePictureNote(index));
+            
             li.appendChild(deleteBtn);
             pictureNotesList.appendChild(li);
-            
-            // Add click event to enlarge photo
             img.addEventListener("click", () => showPhotoModal(imageSrc));
         });
     }
 }
 
-saveImageNoteBtn.addEventListener("click", function() {
+document.getElementById("save-image-note").addEventListener("click", () => {
     const file = imageInput.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(event) {
-            if (!pictureNotes[currentClass]) {
-                pictureNotes[currentClass] = [];
-            }
-            pictureNotes[currentClass].push(event.target.result);
+        reader.onload = (e) => {
+            if (!pictureNotes[currentClass]) pictureNotes[currentClass] = [];
+            pictureNotes[currentClass].push(e.target.result);
             localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
-            imageInput.value = ""; // Clear the input
+            imageInput.value = "";
             loadPictureNotes();
         };
         reader.readAsDataURL(file);
-    } else {
-        alert("Please select an image to upload.");
     }
 });
 
 function deletePictureNote(index) {
-    const confirmDelete = confirm("Are you sure you want to delete this picture note?");
-    if (confirmDelete) {
+    if (confirm("Delete picture?")) {
         pictureNotes[currentClass].splice(index, 1);
         localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
         loadPictureNotes();
     }
 }
 
-// Modal functionality
+// --- PHOTO MODAL ---
 const modal = document.getElementById("photo-modal");
 const modalImg = document.getElementById("modal-img");
-const captionText = document.getElementById("caption");
-const closeModal = document.getElementsByClassName("close")[0];
-const zoomIn = document.getElementById("zoom-in");
-const zoomOut = document.getElementById("zoom-out");
-
 let scale = 1;
 
 function showPhotoModal(src) {
     modal.style.display = "block";
     modalImg.src = src;
-    captionText.innerHTML = "Click the buttons to zoom in and out.";
     scale = 1; 
     modalImg.style.transform = `scale(${scale})`;
 }
 
-closeModal.onclick = function() {
-    modal.style.display = "none";
-}
+document.getElementsByClassName("close")[0].onclick = () => modal.style.display = "none";
+document.getElementById("zoom-in").onclick = () => { scale += 0.1; modalImg.style.transform = `scale(${scale})`; };
+document.getElementById("zoom-out").onclick = () => { if (scale > 0.1) { scale -= 0.1; modalImg.style.transform = `scale(${scale})`; } };
+window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 
-zoomIn.onclick = function() {
-    scale += 0.1;
-    modalImg.style.transform = `scale(${scale})`;
-}
-
-zoomOut.onclick = function() {
-    if (scale > 0.1) {
-        scale -= 0.1;
-        modalImg.style.transform = `scale(${scale})`;
-    }
-}
-
-// Close the modal when clicking outside of the image
-window.onclick = function(event) {
-    if (event.target === modal) {
-        modal.style.display = "none";
-    }
-}
-
-// --- DOM ELEMENTS FOR REEL MODE ---
-const startReelBtn = document.getElementById('start-reel-btn');
-const closeReelBtn = document.getElementById('close-reel-btn');
+// --- REEL MODE & AI TUTOR  ---
 const reelContainer = document.getElementById('reel-container');
 const reelTextOverlay = document.getElementById('reel-text-overlay');
-
 let speechInstance = null;
 
-// --- AI TUTOR LOGIC ---
 let GEMINI_API_KEY = localStorage.getItem("geminiApiKey");
-
 if (!GEMINI_API_KEY) {
-    GEMINI_API_KEY = prompt("Developer Mode: Please enter your Gemini API Key to enable the AI Tutor:");
-    if (GEMINI_API_KEY) {
-        localStorage.setItem("geminiApiKey", GEMINI_API_KEY);
-    } else {
-        alert("AI Tutor disabled. Refresh and enter a key to use this feature.");
-    }
+    GEMINI_API_KEY = prompt("Enter Gemini API Key:");
+    if (GEMINI_API_KEY) localStorage.setItem("geminiApiKey", GEMINI_API_KEY);
 }
 
 async function generateTutorScript(rawNotes) {
     const prompt = `You are a fun, energetic tutor making a short-form video. Take the following class notes and rewrite them into a punchy, easy-to-understand tutor script. Explain the concepts simply yet infoirmative like you're talking to a friend. Do NOT use emojis, asterisks, hashtags, or formatting. Just output the plain text script for a text-to-speech engine. Here are the notes: ${rawNotes}`;
-    
     try {
-
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
-        
         const data = await response.json();
-        
-        // Error
-        if (!response.ok) {
-            console.error("Full Google Error:", data);
-            return `API REJECTED: ${data.error.message}`; 
-        }
-
         return data.candidates[0].content.parts[0].text;
-        
-    } catch (error) {
-        console.error("Network Error:", error);
-        return `NETWORK ERROR: Are you offline or is the browser blocking it?`;
-    }
+    } catch (error) { return "Error generating script. Check console."; }
 }
 
-// --- REEL MODE ---
-startReelBtn.addEventListener('click', async function() {
+document.getElementById('start-reel-btn').addEventListener('click', async () => {
     window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); 
-
     reelContainer.classList.remove('hidden');
-    
-    if (!textNotes[currentClass] || textNotes[currentClass].length === 0) {
-        reelTextOverlay.innerText = "NO NOTES FOUND";
-        return;
+    if (!textNotes[currentClass] || textNotes[currentClass].length === 0) { 
+        reelTextOverlay.innerText = "NO NOTES TO READ"; 
+        return; 
     }
 
-    // 1. Grab raw notes and show loading screen
     const rawScriptText = textNotes[currentClass].join(" ");
-    reelTextOverlay.innerText = "Loading Reel...";
-    reelTextOverlay.style.animation = 'none';
-
-    // 2. Wait for AI to rewrite the notes
+    reelTextOverlay.innerText = "LOADING REEL...";
     const aiScript = await generateTutorScript(rawScriptText);
-    console.log("THE AI WROTE THIS SCRIPT:", aiScript);
-
     const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
 
-    // 3. Setup the talking robot with the CLEANED script
     speechInstance = new SpeechSynthesisUtterance(cleanScript);
-    speechInstance.rate = 1.3; 
-    speechInstance.pitch = 1;
-
-    // 4. Sync the text to pop up on screen
-    speechInstance.onboundary = function(event) {
+    speechInstance.rate = 1.3;
+    speechInstance.onboundary = (event) => {
         if (event.name === 'word') {
-            const remainingText = cleanScript.substring(event.charIndex);
-            const match = remainingText.match(/^[\w'.-]+[!,?.]*/);
-            
-            if (match) {
-                const currentWord = match[0];
-                reelTextOverlay.innerText = currentWord.toUpperCase();
-                
+            const wordMatch = cleanScript.substring(event.charIndex).match(/^[\w'.-]+/);
+            if(wordMatch) {
+                reelTextOverlay.innerText = wordMatch[0].toUpperCase();
                 reelTextOverlay.style.animation = 'none';
                 void reelTextOverlay.offsetWidth; 
                 reelTextOverlay.style.animation = 'wordPop 0.15s ease-out forwards';
             }
         }
     };
-
-    speechInstance.onend = function() {
-        reelTextOverlay.innerText = "REEL FINISHED";
-    };
-
-    // 5. Speak! (Removed the cancel() so it doesn't instantly kill itself)
+    speechInstance.onend = () => reelTextOverlay.innerText = "FINISHED";
     window.speechSynthesis.speak(speechInstance);
 });
 
-// --- REEL MODE CLOSE  ---
-closeReelBtn.addEventListener('click', function() {
+document.getElementById('close-reel-btn').addEventListener('click', () => {
     reelContainer.classList.add('hidden');
-    window.speechSynthesis.cancel(); // Stop talking when closed
-    reelTextOverlay.innerText = "";
+    window.speechSynthesis.cancel();
 });

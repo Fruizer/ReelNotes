@@ -1,18 +1,21 @@
 # ReelNotes (v2.0)
 
-Traditional note-taking apps are boring. Reel Notes is an evolving study system designed to defeat short attention spans by turning static notes into high-retention, AI-generated short-form content.
+Traditional note-taking apps are boring. ReelNotes is an evolving study system designed to defeat short attention spans by turning static notes into high-retention, AI-generated short-form content.
+
+## 🌟 What's New in v2.0 (The UI Update)
+The entire application has been rewritten to ditch standard browser alerts and light-mode defaults, replacing them with a sleek, tactical interface.
+
+* **"UI:** A dark-mode aesthetic featuring deep navy (`#0F172A`) backgrounds, electric blue accents, and a modern "Bento Grid" layout for subject cards.
+* **Custom Modals:** Ripped out the clunky browser `prompt()` alerts. Adding subjects is now handled through a clean, custom-built dimming overlay.
+* **Select / Edit Mode:** Added a "Select Mode" to manage the dashboard. Users can now click multiple bento cards to bulk-delete subjects instead of deleting them one by one.
+* **Top Navbar & Branding:** Added a persistent top navigation bar framing the app with a clean profile layout.
+* **AI Model Bump:** Upgraded the AI Tutor engine to use `gemini-2.5-flash-lite` for faster, punchier script generation.
 
 ## Version History
 
-### v2.0 — The AI & Dashboard Update (Current)
-* **Single-Page Subject Dashboard:** Ripped out the clunky navigation menus. Subjects now load instantly in a clean, responsive grid layout for zero-friction access.
-* **Gemini AI Tutor:** Integrated Google's Gemini 1.5 Flash model. The app now takes your raw, messy notes and dynamically rewrites them into punchy, 30-second "Doomscroll" scripts.
-* **Dynamic Word-Pop Sync:** Upgraded the text-to-speech engine using the `onboundary` event. Words now "pop" on the screen in perfect synchronization with the AI's voice, mimicking the TikTok/Reels aesthetic.
-* **Security-First Architecture:** Built a secure `localStorage` prompt for the Gemini API key, keeping the repository safe while allowing local development.
-
 ### v1.2 — The "Talking" Update
 * **Video Canvas Overlay:** Implemented a fixed-position cinema container with vertical video support.
-* **Web Speech Integration:** Integrated the browser's native `window.speechSynthesis` to read saved notes out loud.
+* **Dynamic Word-Pop Sync:** Integrated Web Speech API with the `onboundary` event to make text "pop" on screen in perfect sync with the AI's voice, mimicking the TikTok/Reels aesthetic.
 
 ### v1.0 — The Prototype
 * **Class & Note Management:** Basic CRUD functionality for subjects and notes.
@@ -22,10 +25,11 @@ Traditional note-taking apps are boring. Reel Notes is an evolving study system 
 ---
 
 ## The Roadmap
-My goals for this project:
+My goals for the next iterations:
 
-- [x] **Text-Syncing Logic** – Split the long note strings into 3-4 word "chunks" that pop up on screen in sync with the audio.
-- [x] **TikTok Aesthetic** – Apply high-impact CSS text-shadows and "Pop" animations to the overlay.
-- [x] **AI Integration** – Connect an LLM to automatically format the learning scripts.
-- [ ] **Framework Migration** – Move the vanilla code into an Astro or Vite project for better performance and organization.
-- [ ] **Supabase Integration** – Move data from the browser to the cloud.
+- [x] **TikTok Aesthetic** – Apply high-impact CSS text-shadows and "Pop" animations.
+- [x] **AI Integration** – Connect an LLM to automatically format learning scripts.
+- [x] **UI Overhaul** – Build a modern, dark-mode bento grid dashboard.
+- [ ] **Custom Subject Covers** – Allow users to upload photos or select hex colors for their subject cards.
+- [ ] **Photo Text Extractor** – Add OCR to instantly extract text from photos of whiteboards/textbooks and feed it into the Reel.
+- [ ] **Database Migration** – Move data from browser `localStorage` to a cloud backend like Supabase.
