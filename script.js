@@ -7,26 +7,18 @@ const classButtonsDiv = document.getElementById("class-buttons");
 const classSearchInput = document.getElementById("class-search");
 const noteSearchInput = document.getElementById("note-search");
 
-let classes = JSON.parse(localStorage.getItem("classes")) || [];
+
+let subjects = JSON.parse(localStorage.getItem("subjects")) || [];
 let textNotes = JSON.parse(localStorage.getItem("textNotes")) || {};
 let pictureNotes = JSON.parse(localStorage.getItem("pictureNotes")) || {};
-let currentClass = "";
+let currentClass = ""; 
 let selectedNoteIndex = null;
 
-document.getElementById("see-classes").addEventListener("click", function() {
-    mainMenu.classList.add("hidden");
-    classSelection.classList.remove("hidden");
-    updateClassButtons();
-});
-
-document.getElementById("back-to-main").addEventListener("click", function() {
-    classSelection.classList.add("hidden");
-    mainMenu.classList.remove("hidden");
-});
+window.onload = updateSubjectDisplay;
 
 document.getElementById("back-to-classes").addEventListener("click", function() {
     notesMenu.classList.add("hidden");
-    classSelection.classList.remove("hidden");
+    mainMenu.classList.remove("hidden");
 });
 
 document.getElementById("text-notes").addEventListener("click", function() {
@@ -52,55 +44,61 @@ document.getElementById("back-to-notes-pictures").addEventListener("click", func
     notesMenu.classList.remove("hidden");
 });
 
-document.getElementById("create-class").addEventListener("click", function() {
-    const className = prompt("Enter the name of the new class:");
-    if (className && !classes.includes(className)) {
-        classes.push(className);
-        localStorage.setItem("classes", JSON.stringify(classes));
-        updateClassButtons();
-    } else if (classes.includes(className)) {
-        alert("Class already exists.");
-    }
-});
 
-document.getElementById("delete-class").addEventListener("click", function() {
-    const className = prompt("Enter the name of the class to delete:");
-    if (className && classes.includes(className)) {
-        const confirmDelete = confirm(`Are you sure you want to delete the class "${className}"?`);
-        if (confirmDelete) {
-            classes = classes.filter(c => c !== className);
-            delete textNotes[className]; // Remove associated notes
-            delete pictureNotes[className]; // Remove associated picture notes
-            localStorage.setItem("classes", JSON.stringify(classes));
-            localStorage.setItem("textNotes", JSON.stringify(textNotes));
-            localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
-            updateClassButtons();
-        }
-    } else {
-        alert("Class not found.");
-    }
-});
-
-// Brute Force Search Algorithm for Classes
-function updateClassButtons() {
-    classButtonsDiv.innerHTML = "";
-    const searchText = classSearchInput.value.toLowerCase();
-    classes
-        .filter(className => className.toLowerCase().includes(searchText))
-        .forEach((className, index) => {
-            const button = document.createElement("button");
-            button.innerText = className;
-            button.addEventListener("click", () => {
-                currentClass = className;
-                classSelection.classList.add("hidden");
-                notesMenu.classList.remove("hidden");
-                document.getElementById("class-title").innerText = className;
+function updateSubjectDisplay() {
+    const displayDiv = document.getElementById("class-buttons");
+    displayDiv.innerHTML = "";
+    
+    const searchText = document.getElementById("class-search").value.toLowerCase();
+  
+    subjects
+        .filter(s => s.toLowerCase().includes(searchText))
+        .forEach(subjectName => {
+            const btn = document.createElement("button");
+            btn.innerText = subjectName;
+            btn.className = "subject-btn"; 
+            btn.addEventListener("click", () => {
+                currentClass = subjectName;
+                document.getElementById("main-menu").classList.add("hidden");
+                document.getElementById("notes-menu").classList.remove("hidden");
+                document.getElementById("class-title").innerText = subjectName;
             });
-            classButtonsDiv.appendChild(button);
+            displayDiv.appendChild(btn);
         });
 }
 
-classSearchInput.addEventListener("input", updateClassButtons);
+document.getElementById("class-search").addEventListener("input", updateSubjectDisplay);
+
+
+document.getElementById("create-class").addEventListener("click", function() {
+    const subjectName = prompt("Enter the name of the new subject:");
+    if (subjectName && !subjects.includes(subjectName)) {
+        subjects.push(subjectName);
+        localStorage.setItem("subjects", JSON.stringify(subjects));
+        updateSubjectDisplay(); 
+    } else if (subjects.includes(subjectName)) {
+        alert("Subject already exists.");
+    }
+});
+
+
+document.getElementById("delete-class").addEventListener("click", function() {
+    const subjectName = prompt("Enter the name of the subject to delete:");
+    if (subjectName && subjects.includes(subjectName)) {
+        const confirmDelete = confirm(`Are you sure you want to delete the subject "${subjectName}" and all its notes?`);
+        if (confirmDelete) {
+            subjects = subjects.filter(s => s !== subjectName);
+            delete textNotes[subjectName]; 
+            delete pictureNotes[subjectName]; 
+            localStorage.setItem("subjects", JSON.stringify(subjects));
+            localStorage.setItem("textNotes", JSON.stringify(textNotes));
+            localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
+            updateSubjectDisplay();
+        }
+    } else {
+        alert("Subject not found.");
+    }
+});
 
 const textNotesList = document.getElementById("text-notes-list");
 const saveTextNoteBtn = document.getElementById("save-text-note");
@@ -109,7 +107,7 @@ const deleteTextNoteBtn = document.getElementById("delete-text-note");
 const textNoteInput = document.getElementById("text-note-input");
 const sortTextNotesBtn = document.getElementById("sort-text-notes");
 
-// Brute Force Search Algorithm for Text Notes
+
 function loadTextNotes() {
     textNotesList.innerHTML = "";
     const searchText = noteSearchInput.value.toLowerCase();
@@ -347,7 +345,6 @@ async function generateTutorScript(rawNotes) {
 
 // --- REEL MODE ---
 startReelBtn.addEventListener('click', async function() {
-    // --- THE CHROME UNLOCKER HACK ---
     window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); 
 
     reelContainer.classList.remove('hidden');
@@ -359,7 +356,7 @@ startReelBtn.addEventListener('click', async function() {
 
     // 1. Grab raw notes and show loading screen
     const rawScriptText = textNotes[currentClass].join(" ");
-    reelTextOverlay.innerText = "AI IS THINKING...";
+    reelTextOverlay.innerText = "Loading Reel...";
     reelTextOverlay.style.animation = 'none';
 
     // 2. Wait for AI to rewrite the notes

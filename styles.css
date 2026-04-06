@@ -198,6 +198,30 @@ button.delete:hover {
     text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; 
 }
 
+.subject-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+    padding: 10px;
+}
+
+.subject-btn {
+    background-color: #28a745; /* Green for subjects */
+    color: white;
+    font-weight: bold;
+    min-height: 80px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: 0.2s;
+}
+
+.subject-btn:hover {
+    background-color: #218838;
+    transform: scale(1.05);
+}
+
+
 /* TikTok Word Pop Animation */
 @keyframes wordPop {
     0% {

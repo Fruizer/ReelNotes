@@ -8,11 +8,21 @@
 </head>
 <body>
     <div class="container" id="main-menu">
-        <h1>Main Menu</h1>
-        <button id="create-class">Create a Class</button>
-        <button id="delete-class">Delete a Class</button>
-        <button id="see-classes">See Classes</button>
+    <h1>Subject Dashboard</h1>
+    
+    <div style="display: flex; justify-content: center; gap: 10px;">
+        <button id="create-class">Add Subject</button>
+        <button id="delete-class" class="delete">Remove Subject</button>
     </div>
+
+    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+    <div id="subject-section">
+        <input type="text" id="class-search" placeholder="Search subjects...">
+        <div id="class-buttons" class="subject-grid">
+            </div>
+    </div>
+</div>
 
     <div class="container hidden" id="class-selection">
         <h2>Select a Class</h2>
