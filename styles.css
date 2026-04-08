@@ -410,3 +410,49 @@ button.subject-btn.selected-for-delete::after {
 .dark-list li.expanded .note-preview {
     display: none;
 }
+
+/* --- SMART SELECTION CHECKBOXES --- */
+.note-checkbox {
+    display: none; /* Hidden by default */
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #334155;
+    border-radius: 6px;
+    background-color: #1E293B;
+    cursor: pointer;
+    margin-right: 15px;
+    position: relative;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+/* Shows checkboxes ONLY when Select Mode is active */
+.select-mode-active .note-checkbox {
+    display: inline-block;
+}
+
+.note-checkbox:checked {
+    background-color: #38BDF8;
+    border-color: #38BDF8;
+}
+
+.note-checkbox:checked::after {
+    content: '✔';
+    position: absolute;
+    color: #0F172A;
+    font-size: 14px;
+    font-weight: 900;
+    top: 0px;
+    left: 4px;
+}
+
+/* Hover effects for selection */
+.select-mode-active .dark-list li:hover {
+    border-color: #94A3B8;
+}
+
+.note-title-text {
+    flex-grow: 1;
+}

@@ -15,6 +15,8 @@ let subjects = JSON.parse(localStorage.getItem("subjects")) || JSON.parse(localS
 let textNotes = JSON.parse(localStorage.getItem("textNotes")) || {};
 let pictureNotes = JSON.parse(localStorage.getItem("pictureNotes")) || {};
 let pinnedSubjects = JSON.parse(localStorage.getItem("pinnedSubjects")) || [];
+let isNoteSelectMode = false;
+let selectedNoteIndices = new Set();
 let currentClass = "";
 let selectedNoteIndex = null;
 
@@ -24,7 +26,6 @@ let subjectsToDelete = new Set();
 
 // Run immediately
 window.onload = () => {
-    // Save migrated data if needed
     localStorage.setItem("subjects", JSON.stringify(subjects));
     updateSubjectDisplay();
 };
@@ -139,7 +140,7 @@ document.getElementById("confirm-add").addEventListener("click", () => {
 // --- EDIT MODE LOGIC  ---
 const defaultActions = document.getElementById("default-actions");
 const editActions = document.getElementById("edit-actions");
-const deleteSelectedBtn = document.getElementById("delete-selected");
+const deleteSelectedBtnDashboard = document.getElementById("delete-selected");
 
 function toggleEditMode() {
     isEditMode = !isEditMode;
@@ -158,7 +159,7 @@ function toggleEditMode() {
 }
 
 function updateDeleteButtonText() {
-    deleteSelectedBtn.innerText = `Delete Selected (${subjectsToDelete.size})`;
+    deleteSelectedBtnDashboard.innerText = `Delete Selected (${subjectsToDelete.size})`;
 }
 
 document.getElementById("toggle-edit-mode").addEventListener("click", toggleEditMode);
@@ -185,15 +186,11 @@ document.getElementById("delete-selected").addEventListener("click", () => {
 
 // --- WORKSPACE NAVIGATION LOGIC ---
 function switchWorkspaceView(viewType) {
-    // Reset buttons
     navTextNotes.classList.remove("active");
     navPictureNotes.classList.remove("active");
-    
-    // Hide both views
     viewTextNotes.classList.add("hidden");
     viewPictureNotes.classList.add("hidden");
     
-    // Show selected
     if (viewType === 'text') {
         navTextNotes.classList.add("active");
         viewTextNotes.classList.remove("hidden");
@@ -205,25 +202,25 @@ function switchWorkspaceView(viewType) {
     }
 }
 
-// Sidebar Button Listeners
 navTextNotes.addEventListener("click", () => switchWorkspaceView('text'));
 navPictureNotes.addEventListener("click", () => switchWorkspaceView('picture'));
 
-// Back to Dashboard Listener
 document.getElementById("back-to-dashboard").addEventListener("click", () => {
     workspaceContainer.classList.add("hidden");
     mainMenu.classList.remove("hidden");
-    currentClass = ""; // Clear state
+    currentClass = ""; 
 });
 
-// --- TEXT NOTES LOGIC ---
+// --- TEXT NOTES LOGIC (Smart Selection + Collapsible) ---
 const textNotesList = document.getElementById("text-notes-list");
 const textNoteInput = document.getElementById("text-note-input");
 
-// --- TEXT NOTES LOGIC (Collapsible + Titles) ---
 function loadTextNotes() {
     textNotesList.innerHTML = "";
     const searchText = noteSearchInput.value.toLowerCase();
+    
+    if (isNoteSelectMode) textNotesList.classList.add("select-mode-active");
+    else textNotesList.classList.remove("select-mode-active");
     
     if (textNotes[currentClass]) {
         textNotes[currentClass].forEach((noteData, index) => {
@@ -234,21 +231,31 @@ function loadTextNotes() {
             if (title.toLowerCase().includes(searchText) || content.toLowerCase().includes(searchText)) {
                 const li = document.createElement("li");
                 
-                // Creates a clean 80-character preview
+                const isChecked = selectedNoteIndices.has(index) ? "checked" : "";
                 const previewText = content.length > 80 ? content.substring(0, 80) + "..." : content;
                 
                 li.innerHTML = `
                     <div class="note-header-bar">
-                        <span>${title}</span>
+                        <input type="checkbox" class="note-checkbox" data-index="${index}" ${isChecked}>
+                        <span class="note-title-text">${title}</span>
                         <svg class="note-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                     </div>
                     <div class="note-preview">${previewText}</div>
                     <div class="note-body">${content}</div>
                 `;
 
-                li.addEventListener("click", () => {
-                    li.classList.toggle("expanded");
-                    selectNote(index);
+                li.addEventListener("click", (e) => {
+                    if (isNoteSelectMode) {
+                        const checkbox = li.querySelector('.note-checkbox');
+                        if (e.target !== checkbox) checkbox.checked = !checkbox.checked; 
+                        
+                        if (checkbox.checked) selectedNoteIndices.add(index);
+                        else selectedNoteIndices.delete(index);
+                        
+                        updateNoteSelectionUI();
+                    } else {
+                        li.classList.toggle("expanded");
+                    }
                 });
                 textNotesList.appendChild(li);
             }
@@ -277,62 +284,86 @@ document.getElementById("save-text-note").addEventListener("click", () => {
     }
 });
 
-document.getElementById("edit-text-note").addEventListener("click", () => {
-    if (selectedNoteIndex !== null) {
-        const noteData = textNotes[currentClass][selectedNoteIndex];
-        const isObj = typeof noteData === 'object' && noteData !== null;
-        
-        textNoteTitleInput.value = isObj ? noteData.title : `Note ${selectedNoteIndex + 1}`;
-        textNoteInput.value = isObj ? noteData.content : noteData;
-    } else {
-        alert("Click on a note to select it for editing.");
-    }
-});
-
 noteSearchInput.addEventListener("input", loadTextNotes);
 
-function selectNote(index) {
-    selectedNoteIndex = index;
-    document.querySelectorAll("#text-notes-list li").forEach((li, i) => li.classList.toggle("selected", i === index));
+// --- SMART SELECTION ACTION LOGIC ---
+const startReelBtn = document.getElementById("start-reel-btn");
+const dynamicActionBar = document.getElementById("dynamic-action-bar");
+const editSelectedBtn = document.getElementById("edit-selected-note");
+const deleteSelectedBtnNotes = document.getElementById("delete-selected-notes");
+const toggleSelectBtn = document.getElementById("toggle-select-notes");
+
+toggleSelectBtn.addEventListener("click", () => {
+    isNoteSelectMode = !isNoteSelectMode;
+    selectedNoteIndices.clear(); 
+    
+    if (isNoteSelectMode) {
+        toggleSelectBtn.innerText = "Cancel Selection";
+        toggleSelectBtn.style.color = "#EF4444";
+        toggleSelectBtn.style.borderColor = "#EF4444";
+    } else {
+        toggleSelectBtn.innerText = "Select Notes";
+        toggleSelectBtn.style.color = ""; 
+        toggleSelectBtn.style.borderColor = "";
+    }
+    
+    updateNoteSelectionUI();
+    loadTextNotes(); 
+});
+
+function updateNoteSelectionUI() {
+    if (selectedNoteIndices.size > 0) {
+        startReelBtn.innerText = `▶ START REEL (${selectedNoteIndices.size} Selected)`;
+        dynamicActionBar.classList.remove("hidden");
+        
+        if (selectedNoteIndices.size === 1) editSelectedBtn.classList.remove("hidden");
+        else editSelectedBtn.classList.add("hidden");
+        
+        deleteSelectedBtnNotes.innerText = `Delete (${selectedNoteIndices.size})`;
+    } else {
+        startReelBtn.innerText = `▶ START REEL`;
+        dynamicActionBar.classList.add("hidden");
+    }
 }
 
-document.getElementById("save-text-note").addEventListener("click", () => {
-    const note = textNoteInput.value.trim();
-    if (note) {
-        if (selectedNoteIndex !== null) {
-            textNotes[currentClass][selectedNoteIndex] = note;
-            selectedNoteIndex = null;
-        } else {
-            if (!textNotes[currentClass]) textNotes[currentClass] = [];
-            textNotes[currentClass].push(note);
-        }
-        localStorage.setItem("textNotes", JSON.stringify(textNotes));
-        textNoteInput.value = "";
-        loadTextNotes();
+editSelectedBtn.addEventListener("click", () => {
+    if (selectedNoteIndices.size === 1) {
+        const indexToEdit = Array.from(selectedNoteIndices)[0];
+        const noteData = textNotes[currentClass][indexToEdit];
+        const isObj = typeof noteData === 'object' && noteData !== null;
+        
+        textNoteTitleInput.value = isObj ? noteData.title : `Note ${indexToEdit + 1}`;
+        textNoteInput.value = isObj ? noteData.content : noteData;
+        
+        textNotes[currentClass].splice(indexToEdit, 1);
+        toggleSelectBtn.click(); 
     }
 });
 
-document.getElementById("edit-text-note").addEventListener("click", () => {
-    if (selectedNoteIndex !== null) textNoteInput.value = textNotes[currentClass][selectedNoteIndex];
-    else alert("Select a note to edit.");
-});
-
-document.getElementById("delete-text-note").addEventListener("click", () => {
-    if (selectedNoteIndex !== null && confirm("Delete note?")) {
-        textNotes[currentClass].splice(selectedNoteIndex, 1);
+deleteSelectedBtnNotes.addEventListener("click", () => {
+    if (selectedNoteIndices.size > 0 && confirm(`Delete ${selectedNoteIndices.size} selected note(s)?`)) {
+        const indicesToDelete = Array.from(selectedNoteIndices).sort((a, b) => b - a);
+        indicesToDelete.forEach(index => textNotes[currentClass].splice(index, 1));
+        
         localStorage.setItem("textNotes", JSON.stringify(textNotes));
-        loadTextNotes();
-        selectedNoteIndex = null;
+        toggleSelectBtn.click(); 
     }
 });
 
+// Sort Button Logic for Object-based notes
 document.getElementById("sort-text-notes").addEventListener("click", () => {
     if (textNotes[currentClass]) {
-        textNotes[currentClass].sort();
+        textNotes[currentClass].sort((a, b) => {
+            // Check if it's the new Title/Content format, or an old plain text note
+            const titleA = (typeof a === 'object' && a !== null) ? a.title.toLowerCase() : a.toLowerCase();
+            const titleB = (typeof b === 'object' && b !== null) ? b.title.toLowerCase() : b.toLowerCase();
+            return titleA.localeCompare(titleB);
+        });
         localStorage.setItem("textNotes", JSON.stringify(textNotes));
         loadTextNotes();
     }
 });
+
 
 // --- PICTURE NOTES LOGIC ---
 const pictureNotesList = document.getElementById("picture-notes-list");
@@ -435,8 +466,14 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
         return; 
     }
 
-    // 3. Format the notes securely
-    const rawScriptText = textNotes[currentClass].map(n => {
+    // 3. Format the notes securely (WITH SMART SELECTION)
+    let notesToRead = textNotes[currentClass];
+    
+    if (isNoteSelectMode && selectedNoteIndices.size > 0) {
+        notesToRead = Array.from(selectedNoteIndices).map(index => textNotes[currentClass][index]);
+    }
+
+    const rawScriptText = notesToRead.map(n => {
         return (typeof n === 'object' && n !== null) ? `${n.title}: ${n.content}` : n;
     }).join("\n\n");
 
@@ -446,20 +483,18 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
     try {
         const aiScript = await generateTutorScript(rawScriptText);
         
-        // Define cleanScript properly so it doesn't throw a ReferenceError
         const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
-        speechInstance.rate = 1.3; // Speed it up slightly
+        speechInstance.rate = 1.3; 
         
         speechInstance.onboundary = (event) => {
             if (event.name === 'word') {
-                // Safely grab the current word being spoken
                 const wordMatch = cleanScript.substring(event.charIndex).match(/^[\w'.-]+/);
                 if(wordMatch) {
                     reelTextOverlay.innerText = wordMatch[0].toUpperCase();
                     reelTextOverlay.style.animation = 'none';
-                    void reelTextOverlay.offsetWidth; // Trigger reflow
+                    void reelTextOverlay.offsetWidth; 
                     reelTextOverlay.style.animation = 'wordPop 0.15s ease-out forwards';
                 }
             }
@@ -467,7 +502,6 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
         
         speechInstance.onend = () => reelTextOverlay.innerText = "FINISHED";
         
-        // Start talking!
         window.speechSynthesis.speak(speechInstance);
 
     } catch (error) {

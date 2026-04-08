@@ -83,18 +83,27 @@
             <div id="view-text-notes" class="content-view">
                 <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Text Notes</h2>
                 
-                <!-- NEW TITLE INPUT -->
+                <!-- TITLE & CONTENT INPUTS -->
                 <input type="text" id="text-note-title" class="dark-input full-width" placeholder="Note Title (e.g., Chapter 1: Introduction)" style="margin-bottom: 10px; font-weight: bold; font-size: 1.1rem;">
-                
                 <textarea id="text-note-input" class="dark-input full-width" rows="5" placeholder="Paste or type your note content here..."></textarea>
                 
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <!-- BUTTON CLUSTER  -->
+                <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
                     <button id="save-text-note" class="btn-primary">Save Note</button>
-                    <button id="edit-text-note" class="btn-ghost">Edit Selected</button>
-                    <button id="delete-text-note" class="btn-ghost-danger">Delete Selected</button>
+                    <button id="toggle-select-notes" class="btn-ghost">Select Notes</button>
+                    
+                    <!-- Dynamic Edit/Delete (These magically appear next to 'Select Notes' when you click it) -->
+                    <div id="dynamic-action-bar" class="hidden" style="display: flex; gap: 10px;">
+                        <button id="edit-selected-note" class="btn-ghost">Edit Selected</button>
+                        <button id="delete-selected-notes" class="btn-ghost-danger">Delete Selected</button>
+                    </div>
                 </div>
-                <input type="text" id="note-search" class="dark-input full-width" placeholder="Search notes..." style="margin-top: 30px;">
+
+                <!-- FULL WIDTH SEARCH & SORT -->
+                <input type="text" id="note-search" class="dark-input full-width" placeholder="Search notes..." style="margin-top: 25px;">
                 <button id="sort-text-notes" class="btn-ghost" style="margin-top: 10px;">Sort A-Z</button>
+
+                <!-- THE NOTES LIST -->
                 <ul id="text-notes-list" class="dark-list" style="margin-top: 20px;"></ul>
             </div>
 
