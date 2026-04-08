@@ -23,18 +23,19 @@
             </div>
         </div>
   
-        <div class="dashboard-header">
-            <div>
-                <h1 class="glow-text">Subject Dashboard</h1>
-                <p class="subtitle">Select a subject to start the reel or manage contents.</p>
+        <div class="dashboard-header" style="align-items: flex-start; margin-bottom: 30px;">
+            <div class="header-left">
+                <p style="color: #38BDF8; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px;">Dashboard</p>
+                <h1 class="glow-text" style="font-size: 2.2rem; margin-bottom: 5px;">Welcome back, <span style="color: #38BDF8;">Lorenzo</span></h1>
+                <p class="subtitle" style="font-size: 1rem;">Select a subject to manage contents or start the AI reel.</p>
             </div>
-            <div class="action-group" id="default-actions">
-                <button id="show-add-modal" class="btn-primary">+ Add Subject</button>
-                <button id="toggle-edit-mode" class="btn-ghost">Edit Dashboard</button>
+            <div class="action-group" id="default-actions" style="margin-top: 10px;">
+                <button id="show-add-modal" class="btn-primary" style="padding: 12px 24px; font-size: 1rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);">+ Add Subject</button>
+                <button id="toggle-edit-mode" class="btn-ghost" style="padding: 12px 24px; font-size: 1rem; border-radius: 12px;">Edit Dashboard</button>
             </div>
-            <div class="action-group hidden" id="edit-actions">
-                <button id="delete-selected" class="btn-ghost-danger">Delete Selected (0)</button>
-                <button id="cancel-edit-mode" class="btn-ghost">Done</button>
+            <div class="action-group hidden" id="edit-actions" style="margin-top: 10px;">
+                <button id="delete-selected" class="btn-ghost-danger" style="padding: 12px 24px; font-size: 1rem; border-radius: 12px;">Delete Selected (0)</button>
+                <button id="cancel-edit-mode" class="btn-ghost" style="padding: 12px 24px; font-size: 1rem; border-radius: 12px;">Done</button>
             </div>
         </div>
 

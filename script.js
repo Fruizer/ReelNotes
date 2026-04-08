@@ -35,8 +35,18 @@ function updateSubjectDisplay() {
         .filter(s => s.toLowerCase().includes(searchText))
         .forEach((subjectName) => {
             const button = document.createElement("button");
-            button.innerText = subjectName;
             button.className = "subject-btn"; 
+            
+            // THE UI UPGRADE: Injecting rich layout into the card
+            button.innerHTML = `
+                <div class="card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </div>
+                <div class="card-title">${subjectName}</div>
+                <div class="card-footer">Open Workspace &rarr;</div>
+            `;
             
             // Check if we are in edit mode
             if (isEditMode) {
@@ -63,6 +73,9 @@ function updateSubjectDisplay() {
                     mainMenu.classList.add("hidden");
                     notesMenu.classList.remove("hidden");
                     document.getElementById("class-title").innerText = subjectName;
+                    
+                    // Trigger text notes by default for better UX flow
+                    document.getElementById("text-notes").click(); 
                 }
             });
             classButtonsDiv.appendChild(button);
