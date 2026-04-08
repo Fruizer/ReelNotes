@@ -1,13 +1,15 @@
 // --- INITIALIZATION & DATA MIGRATION ---
 const mainMenu = document.getElementById("main-menu");
-const notesMenu = document.getElementById("notes-menu");
-const textNotesMenu = document.getElementById("text-notes-menu");
-const pictureNotesMenu = document.getElementById("picture-notes-menu");
+const workspaceContainer = document.getElementById("workspace-container");
+const viewTextNotes = document.getElementById("view-text-notes");
+const viewPictureNotes = document.getElementById("view-picture-notes");
+const navTextNotes = document.getElementById("nav-text-notes");
+const navPictureNotes = document.getElementById("nav-picture-notes");
 const classButtonsDiv = document.getElementById("class-buttons");
 const classSearchInput = document.getElementById("class-search");
 const noteSearchInput = document.getElementById("note-search");
 
-// Data fallback: if 'subjects' is empty, check for 'classes' from your old version so you don't lose OOP!
+// Data fallback
 let subjects = JSON.parse(localStorage.getItem("subjects")) || JSON.parse(localStorage.getItem("classes")) || [];
 let textNotes = JSON.parse(localStorage.getItem("textNotes")) || {};
 let pictureNotes = JSON.parse(localStorage.getItem("pictureNotes")) || {};
@@ -25,7 +27,7 @@ window.onload = () => {
     updateSubjectDisplay();
 };
 
-// --- V2.0 DASHBOARD LOGIC ---
+// --- DASHBOARD LOGIC ---
 
 function updateSubjectDisplay() {
     classButtonsDiv.innerHTML = "";
@@ -37,7 +39,6 @@ function updateSubjectDisplay() {
             const button = document.createElement("button");
             button.className = "subject-btn"; 
             
-            // THE UI UPGRADE: Injecting rich layout into the card
             button.innerHTML = `
                 <div class="card-icon">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -68,14 +69,15 @@ function updateSubjectDisplay() {
                     }
                     updateDeleteButtonText();
                 } else {
-                    // Normal mode: Open notes
+                    // Normal mode: Open Workspace
                     currentClass = subjectName;
                     mainMenu.classList.add("hidden");
-                    notesMenu.classList.remove("hidden");
-                    document.getElementById("class-title").innerText = subjectName;
+                    workspaceContainer.classList.remove("hidden");
                     
-                    // Trigger text notes by default for better UX flow
-                    document.getElementById("text-notes").click(); 
+                    // Update Title and default to Text Notes
+                    document.getElementById("workspace-title").innerText = subjectName;
+                    switchWorkspaceView('text');
+                    loadTextNotes();
                 }
             });
             classButtonsDiv.appendChild(button);
@@ -84,7 +86,7 @@ function updateSubjectDisplay() {
 
 classSearchInput.addEventListener("input", updateSubjectDisplay);
 
-// --- MODAL LOGIC (ADD SUBJECT) ---
+// --- MODAL LOGIC ---
 const addModal = document.getElementById("custom-add-modal");
 const newSubjectInput = document.getElementById("new-subject-input");
 
@@ -110,7 +112,7 @@ document.getElementById("confirm-add").addEventListener("click", () => {
     }
 });
 
-// --- EDIT MODE LOGIC (DELETE MULTIPLE) ---
+// --- EDIT MODE LOGIC  ---
 const defaultActions = document.getElementById("default-actions");
 const editActions = document.getElementById("edit-actions");
 const deleteSelectedBtn = document.getElementById("delete-selected");
@@ -157,29 +159,37 @@ document.getElementById("delete-selected").addEventListener("click", () => {
     }
 });
 
+// --- WORKSPACE NAVIGATION LOGIC ---
+function switchWorkspaceView(viewType) {
+    // Reset buttons
+    navTextNotes.classList.remove("active");
+    navPictureNotes.classList.remove("active");
+    
+    // Hide both views
+    viewTextNotes.classList.add("hidden");
+    viewPictureNotes.classList.add("hidden");
+    
+    // Show selected
+    if (viewType === 'text') {
+        navTextNotes.classList.add("active");
+        viewTextNotes.classList.remove("hidden");
+        loadTextNotes();
+    } else {
+        navPictureNotes.classList.add("active");
+        viewPictureNotes.classList.remove("hidden");
+        loadPictureNotes();
+    }
+}
 
-// --- NAVIGATION LOGIC ---
-document.getElementById("back-to-classes").addEventListener("click", () => {
-    notesMenu.classList.add("hidden");
+// Sidebar Button Listeners
+navTextNotes.addEventListener("click", () => switchWorkspaceView('text'));
+navPictureNotes.addEventListener("click", () => switchWorkspaceView('picture'));
+
+// Back to Dashboard Listener
+document.getElementById("back-to-dashboard").addEventListener("click", () => {
+    workspaceContainer.classList.add("hidden");
     mainMenu.classList.remove("hidden");
-});
-document.getElementById("text-notes").addEventListener("click", () => {
-    notesMenu.classList.add("hidden");
-    textNotesMenu.classList.remove("hidden");
-    loadTextNotes();
-});
-document.getElementById("picture-notes").addEventListener("click", () => {
-    notesMenu.classList.add("hidden");
-    pictureNotesMenu.classList.remove("hidden");
-    loadPictureNotes();
-});
-document.getElementById("back-to-notes").addEventListener("click", () => {
-    textNotesMenu.classList.add("hidden");
-    notesMenu.classList.remove("hidden");
-});
-document.getElementById("back-to-notes-pictures").addEventListener("click", () => {
-    pictureNotesMenu.classList.add("hidden");
-    notesMenu.classList.remove("hidden");
+    currentClass = ""; // Clear state
 });
 
 // --- TEXT NOTES LOGIC ---

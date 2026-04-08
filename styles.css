@@ -1,4 +1,4 @@
-/* --- V2.0 MIDNIGHT TECH BASE --- */
+/* --- UI BASE--- */
 body {
     background-color: #0F172A; /* Deep Navy */
     color: #F8FAFC; /* Icy White */
@@ -106,7 +106,7 @@ button {
     margin-top: 20px;
 }
 
-/* --- PREMIUM BENTO CARDS --- */
+/* --- BENTO CARDS --- */
 button.subject-btn {
     background: linear-gradient(145deg, #1E293B 0%, #0F172A 100%);
     color: white;
@@ -241,7 +241,7 @@ button.subject-btn.selected-for-delete::after {
 .dark-modal-box h2 { margin-top: 0; }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
-/* REEL MODE (Kept exactly as you had it) */
+/* REEL MODE  */
 #reel-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; z-index: 9999; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 #reel-video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.4; }
 #reel-text-overlay { position: relative; z-index: 10; color: white; font-size: 5rem; font-family: 'Inter', sans-serif; font-weight: 900; text-align: center; text-transform: uppercase; text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; max-width: 90%; word-wrap: break-word; }
@@ -284,4 +284,41 @@ button.subject-btn.selected-for-delete::after {
 
 .user-profile:hover {
     color: #F8FAFC;
+}
+
+/* --- WORKSPACE SIDEBAR STYLES --- */
+.nav-item {
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    padding: 14px 18px;
+    border-radius: 8px;
+    text-align: left;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 4px solid transparent;
+}
+
+.nav-item:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* THE NEON ACTIVE STATE */
+.nav-item.active {
+    color: #38BDF8;
+    background: rgba(56, 189, 248, 0.1);
+    border-left: 4px solid #38BDF8;
+    border-radius: 0 8px 8px 0;
+}
+
+.content-view {
+    animation: fadeIn 0.2s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
 }

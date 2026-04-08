@@ -58,45 +58,53 @@
         </div>
     </div>
 
-    <div class="container dark-container hidden" id="notes-menu">
-        <h1 id="class-title" class="glow-text">Class Name</h1>
-        <button id="back-to-classes" class="btn-ghost" style="margin-bottom: 20px;">← Back to Dashboard</button>
-        <div class="bento-grid">
-            <button id="text-notes" class="subject-btn style-text">Text Notes</button>
-            <button id="picture-notes" class="subject-btn style-pic">Picture Notes</button>
-        </div>
-    </div>
-
-    <div class="container dark-container hidden" id="text-notes-menu">
-        <h2 class="glow-text">Text Notes</h2>
-        <button id="back-to-notes" class="btn-ghost">← Back</button>
+  <!-- THE WORKSPACE -->
+    <div class="container dark-container hidden" id="workspace-container" style="max-width: 100%; width: 100%; padding: 0; display: flex; height: 85vh; border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
         
-        <div style="margin-top: 20px;">
-            <textarea id="text-note-input" class="dark-input full-width" rows="4" placeholder="Type your note here..."></textarea>
-            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                <button id="save-text-note" class="btn-primary">Save Note</button>
-                <button id="edit-text-note" class="btn-ghost">Edit Selected</button>
-                <button id="delete-text-note" class="btn-ghost-danger">Delete Selected</button>
+        <!-- SIDEBAR -->
+        <div class="workspace-sidebar" style="width: 260px; background: #0F172A; border-right: 1px solid #334155; display: flex; flex-direction: column; padding: 25px;">
+            <h2 id="workspace-title" class="glow-text" style="font-size: 1.5rem; margin-top: 0; margin-bottom: 30px; word-wrap: break-word;">Subject</h2>
+            
+            <div class="sidebar-nav" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
+                <button class="nav-item active" id="nav-text-notes">Text Notes</button>
+                <button class="nav-item" id="nav-picture-notes">Picture Notes</button>
+            </div>
+
+            <div class="sidebar-footer" style="margin-top: auto; display: flex; flex-direction: column; gap: 15px;">
+                <button id="start-reel-btn" class="btn-primary" style="width: 100%; font-weight: 800; padding: 15px;">▶ START REEL</button>
+                <button id="back-to-dashboard" class="btn-ghost" style="width: 100%; font-size: 0.85rem;">&larr; Back to Dashboard</button>
             </div>
         </div>
 
-        <input type="text" id="note-search" class="dark-input full-width" placeholder="Search notes..." style="margin-top: 20px;">
-        <button id="sort-text-notes" class="btn-ghost" style="margin-top: 10px;">Sort A-Z</button>
-        
-        <ul id="text-notes-list" class="dark-list"></ul>
-        
-        <button id="start-reel-btn" class="btn-primary huge-btn" style="width: 100%; margin-top: 20px;">START REEL MODE</button>
-    </div>
+        <!-- MAIN CONTENT AREA -->
+        <div class="workspace-content" style="flex: 1; background: #1E293B; padding: 40px; overflow-y: auto;">
+            
+            <!-- TEXT NOTES VIEW -->
+            <div id="view-text-notes" class="content-view">
+                <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Text Notes</h2>
+                <textarea id="text-note-input" class="dark-input full-width" rows="5" placeholder="Paste or type your notes here..."></textarea>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button id="save-text-note" class="btn-primary">Save Note</button>
+                    <button id="edit-text-note" class="btn-ghost">Edit Selected</button>
+                    <button id="delete-text-note" class="btn-ghost-danger">Delete Selected</button>
+                </div>
+                <input type="text" id="note-search" class="dark-input full-width" placeholder="Search notes..." style="margin-top: 30px;">
+                <button id="sort-text-notes" class="btn-ghost" style="margin-top: 10px;">Sort A-Z</button>
+                <ul id="text-notes-list" class="dark-list" style="margin-top: 20px;"></ul>
+            </div>
 
-    <div class="container dark-container hidden" id="picture-notes-menu">
-        <h2 class="glow-text">Picture Notes</h2>
-        <button id="back-to-notes-pictures" class="btn-ghost">← Back</button>
-        <div style="margin-top: 20px;">
-            <input type="file" id="image-input" accept="image/*" class="dark-input">
-            <button id="save-image-note" class="btn-primary" style="margin-top: 10px;">Upload Image</button>
+            <!-- PICTURE NOTES VIEW -->
+            <div id="view-picture-notes" class="content-view hidden">
+                <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Picture Notes</h2>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <input type="file" id="image-input" accept="image/*" class="dark-input" style="flex-grow: 1;">
+                    <button id="save-image-note" class="btn-primary" style="padding: 15px 25px;">Upload</button>
+                </div>
+                <ul id="picture-notes-list" class="picture-grid"></ul>
+            </div>
+
         </div>
-        <ul id="picture-notes-list" class="picture-grid"></ul>
-    </div>
+    </div>  
 
     <div id="photo-modal" class="modal">
         <span class="close">&times;</span>
