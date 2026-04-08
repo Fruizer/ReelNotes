@@ -393,17 +393,52 @@ function loadPictureNotes() {
 
 document.getElementById("save-image-note").addEventListener("click", () => {
     const file = imageInput.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            if (!pictureNotes[currentClass]) pictureNotes[currentClass] = [];
-            pictureNotes[currentClass].push(e.target.result);
-            localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
-            imageInput.value = "";
-            loadPictureNotes();
-        };
-        reader.readAsDataURL(file);
+    if (!file) {
+        alert("Please select an image first!");
+        return;
     }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            // COMPRESSION ENGINE: Shrinks the image using an invisible Canvas
+            const canvas = document.createElement("canvas");
+            const MAX_WIDTH = 1200; // Limits max width
+            const MAX_HEIGHT = 1200; // Limits max height
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height && width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            } else if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Convert to a compressed JPEG string (0.7 = 70% quality)
+            const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+
+            try {
+                if (!pictureNotes[currentClass]) pictureNotes[currentClass] = [];
+                pictureNotes[currentClass].push(compressedDataUrl);
+                localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
+                imageInput.value = "";
+                loadPictureNotes();
+            } catch (error) {
+                console.error("Storage Error:", error);
+                alert("Browser Storage is completely full! Time to migrate to Supabase.");
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 });
 
 function deletePictureNote(index) {
