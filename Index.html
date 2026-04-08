@@ -82,7 +82,12 @@
             <!-- TEXT NOTES VIEW -->
             <div id="view-text-notes" class="content-view">
                 <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Text Notes</h2>
-                <textarea id="text-note-input" class="dark-input full-width" rows="5" placeholder="Paste or type your notes here..."></textarea>
+                
+                <!-- NEW TITLE INPUT -->
+                <input type="text" id="text-note-title" class="dark-input full-width" placeholder="Note Title (e.g., Chapter 1: Introduction)" style="margin-bottom: 10px; font-weight: bold; font-size: 1.1rem;">
+                
+                <textarea id="text-note-input" class="dark-input full-width" rows="5" placeholder="Paste or type your note content here..."></textarea>
+                
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <button id="save-text-note" class="btn-primary">Save Note</button>
                     <button id="edit-text-note" class="btn-ghost">Edit Selected</button>
