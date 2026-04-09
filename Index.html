@@ -70,6 +70,19 @@
         </div>
     </div>
 
+    <!-- Custom Extract Title Modal -->
+    <div id="custom-title-modal" class="dark-overlay hidden" style="z-index: 10000;">
+        <div class="dark-modal-box">
+            <h2 style="margin-top: 0; color: #F8FAFC;">Name Your Notes</h2>
+            <p style="color: #94A3B8; margin-bottom: 15px;">What should we call these extracted whiteboard notes?</p>
+            <input type="text" id="extract-title-input" class="dark-input full-width" placeholder="e.g., Physics Board Week 4">
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button id="cancel-title-btn" class="btn-ghost">Cancel</button>
+                <button id="confirm-title-btn" class="btn-primary">Extract Text</button>
+            </div>
+        </div>
+    </div>
+
     <!-- === THE WORKSPACE === -->
     <div class="container dark-container hidden" id="workspace-container" style="max-width: 100%; width: 100%; padding: 0; display: flex; height: 85vh; border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
         
@@ -127,11 +140,13 @@
     </div>  
 
     <!-- === FULLSCREEN OVERLAYS === -->
+    <!-- PHOTO ZOOM & EXTRACT MODAL -->
     <div id="photo-modal" class="modal">
         <span class="close">&times;</span>
         <img class="modal-content" id="modal-img">
         <div id="caption"></div>
-        <div class="modal-controls">
+        <div class="modal-controls" style="display: flex; gap: 15px; align-items: center;">
+            <button id="extract-text-btn" class="btn-primary" style="background-color: #A855F7; color: white; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4);">✨ Extract Text</button>
             <button id="zoom-in" class="btn-primary">+</button>
             <button id="zoom-out" class="btn-primary">-</button>
         </div>

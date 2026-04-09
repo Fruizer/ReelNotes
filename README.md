@@ -1,35 +1,32 @@
-# ReelNotes (v2.0)
+# ReelNotes
 
-Traditional note-taking apps are boring. ReelNotes is an evolving study system designed to defeat short attention spans by turning static notes into high-retention, AI-generated short-form content.
+ReelNotes is a modern, AI-powered study dashboard designed to turn static class notes into dynamic, short-form "Reel-style" video lectures. Built with a sleek dark-mode UI, it allows students to organize text and picture notes, extract text from handwritten whiteboards using AI Vision, and automatically generate spoken-word tutor sessions with kinetic typography.
 
-## 🌟 What's New in v2.0 (The UI Update)
-The entire application has been rewritten to ditch standard browser alerts and light-mode defaults, replacing them with a sleek, tactical interface.
+## Features
 
-* **"UI:** A dark-mode aesthetic featuring deep navy (`#0F172A`) backgrounds, electric blue accents, and a modern "Bento Grid" layout for subject cards.
-* **Custom Modals:** Ripped out the clunky browser `prompt()` alerts. Adding subjects is now handled through a clean, custom-built dimming overlay.
-* **Select / Edit Mode:** Added a "Select Mode" to manage the dashboard. Users can now click multiple bento cards to bulk-delete subjects instead of deleting them one by one.
-* **Top Navbar & Branding:** Added a persistent top navigation bar framing the app with a clean profile layout.
-* **AI Model Bump:** Upgraded the AI Tutor engine to use `gemini-2.5-flash-lite` for faster, punchier script generation.
+*   **AI Tutor Reel Mode:** Select your notes and hit "Start Reel." The app uses **Gemini 2.5 Flash-Lite** to instantly rewrite your notes into a punchy, energetic tutor script, and reads it out loud using the Web Speech API with perfectly synced, TikTok-style kinetic text animations.
+*   **Vision OCR Extraction:** Took a picture of a messy whiteboard? Open the image, click Extract Text, and **Gemini 2.5 Flash** will read the handwriting (including math and physics equations) and convert it directly into formatted Text Notes.
+*   **Smart Selection Engine:** A custom-built UI that allows you to seamlessly multi-select notes for batch deletion, editing, or feeding specifically chosen contexts to the AI Tutor.
+*   **Auto-Compressing Picture Notes:** Bypasses browser LocalStorage limits by utilizing an invisible HTML5 Canvas engine to dynamically resize and compress images upon upload.
+*   **Custom Dark Mode UI:** Zero ugly browser alerts. Features custom-built modals, collapsible accordion lists, and a responsive Bento-box dashboard grid.
 
-## Version History
+## Tech Stack
 
-### v1.2 — The "Talking" Update
-* **Video Canvas Overlay:** Implemented a fixed-position cinema container with vertical video support.
-* **Dynamic Word-Pop Sync:** Integrated Web Speech API with the `onboundary` event to make text "pop" on screen in perfect sync with the AI's voice, mimicking the TikTok/Reels aesthetic.
+*   **Frontend:** Pure Vanilla HTML5, CSS3, and JavaScript (ES6+).
+*   **AI Engine:** Google Gemini API (`gemini-2.5-flash` for Vision, `gemini-2.5-flash-lite` for text-generation).
+*   **Storage:** Window `localStorage` (Cloud database migration coming soon).
+*   **APIs:** Web Speech API (Text-to-Speech).
 
-### v1.0 — The Prototype
-* **Class & Note Management:** Basic CRUD functionality for subjects and notes.
-* **Picture Notes:** Support for image uploads with a zoomable focus modal.
-* **Local Persistence:** Uses `localStorage` to keep data saved between sessions.
 
----
+## Usage Guide
 
-## The Roadmap
-My goals for the next iterations:
+1. **Dashboard:** Create a subject (e.g., "Data Structures"). Pin your most important subjects to the top using the pin icon.
+2. **Text Notes:** Type your notes, or paste them in. Use "Select Notes" to choose which ones you want to turn into a Reel.
+3. **Picture Notes:** Upload photos of your lectures. Click on a photo to open the smooth scroll-to-zoom modal.
+4. **Extract Text:** Inside the photo modal, click the purple Extract button to let the AI transcribe the image into your Text Notes.
 
-- [x] **TikTok Aesthetic** – Apply high-impact CSS text-shadows and "Pop" animations.
-- [x] **AI Integration** – Connect an LLM to automatically format learning scripts.
-- [x] **UI Overhaul** – Build a modern, dark-mode bento grid dashboard.
-- [ ] **Custom Subject Covers** – Allow users to upload photos or select hex colors for their subject cards.
-- [ ] **Photo Text Extractor** – Add OCR to instantly extract text from photos of whiteboards/textbooks and feed it into the Reel.
-- [ ] **Database Migration** – Move data from browser `localStorage` to a cloud backend like Supabase.
+## Roadmap / Next Steps
+
+- [ ] Migrate from LocalStorage to **Supabase** for persistent cloud storage and cross-device syncing.
+- [ ] Add User Authentication (Google Login).
+- [ ] Implement Markdown rendering for mathematical formulas and code blocks.

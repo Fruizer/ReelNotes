@@ -271,6 +271,8 @@ function loadTextNotes() {
                 `;
 
                 li.addEventListener("click", (e) => {
+                    if (window.getSelection().toString().length > 0) return;
+
                     if (isNoteSelectMode) {
                         const checkbox = li.querySelector('.note-checkbox');
                         if (e.target !== checkbox) checkbox.checked = !checkbox.checked; 
@@ -368,7 +370,6 @@ editSelectedBtn.addEventListener("click", () => {
 
 deleteSelectedBtnNotes.addEventListener("click", () => {
     if (selectedNoteIndices.size > 0) {
-        // NEW CUSTOM MODAL CALL
         showCustomConfirm(`Delete ${selectedNoteIndices.size} selected note(s)?`, () => {
             const indicesToDelete = Array.from(selectedNoteIndices).sort((a, b) => b - a);
             indicesToDelete.forEach(index => textNotes[currentClass].splice(index, 1));
@@ -469,7 +470,6 @@ document.getElementById("save-image-note").addEventListener("click", () => {
 });
 
 function deletePictureNote(index) {
-    // NEW CUSTOM MODAL CALL
     showCustomConfirm("Delete this picture note?", () => {
         pictureNotes[currentClass].splice(index, 1);
         localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
@@ -477,59 +477,156 @@ function deletePictureNote(index) {
     });
 }
 
-// --- PHOTO MODAL ---
+// --- API KEY MANAGER ---
+function getApiKey() {
+    let key = localStorage.getItem("geminiApiKey");
+    if (!key) {
+        key = prompt("Please enter your Gemini API Key:");
+        if (key) localStorage.setItem("geminiApiKey", key);
+    }
+    return key;
+}
+
+// --- PHOTO MODAL, SCROLL ZOOM & VISION AI ---
 const modal = document.getElementById("photo-modal");
 const modalImg = document.getElementById("modal-img");
+const extractTextBtn = document.getElementById("extract-text-btn");
 let scale = 1;
+let currentActiveImageSrc = ""; 
 
 function showPhotoModal(src) {
     modal.style.display = "block";
     modalImg.src = src;
+    currentActiveImageSrc = src;
     scale = 1; 
     modalImg.style.transform = `scale(${scale})`;
+    
+    extractTextBtn.innerText = "Extract Text";
+    extractTextBtn.disabled = false;
 }
 
 document.getElementsByClassName("close")[0].onclick = () => modal.style.display = "none";
-document.getElementById("zoom-in").onclick = () => { scale += 0.1; modalImg.style.transform = `scale(${scale})`; };
-document.getElementById("zoom-out").onclick = () => { if (scale > 0.1) { scale -= 0.1; modalImg.style.transform = `scale(${scale})`; } };
 window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 
-// --- REEL MODE & AI TUTOR  ---
+document.getElementById("zoom-in").onclick = () => { scale += 0.1; modalImg.style.transform = `scale(${scale})`; };
+document.getElementById("zoom-out").onclick = () => { if (scale > 0.2) { scale -= 0.1; modalImg.style.transform = `scale(${scale})`; } };
+
+modalImg.addEventListener("wheel", (e) => {
+    e.preventDefault(); 
+    if (e.deltaY < 0) scale += 0.1; 
+    else if (scale > 0.2) scale -= 0.1; 
+    modalImg.style.transform = `scale(${scale})`;
+}, { passive: false });
+
+// --- CUSTOM TITLE MODAL & GEMINI VISION TEXT EXTRACTION ---
+const titleModal = document.getElementById("custom-title-modal");
+const titleInput = document.getElementById("extract-title-input");
+const confirmTitleBtn = document.getElementById("confirm-title-btn");
+const cancelTitleBtn = document.getElementById("cancel-title-btn");
+
+extractTextBtn.addEventListener("click", () => {
+    titleInput.value = ""; 
+    titleModal.classList.remove("hidden");
+    titleInput.focus();
+});
+
+cancelTitleBtn.addEventListener("click", () => {
+    titleModal.classList.add("hidden");
+});
+
+confirmTitleBtn.addEventListener("click", async () => {
+    const title = titleInput.value.trim() || "Extracted Whiteboard Note";
+    titleModal.classList.add("hidden"); 
+
+    const apiKey = getApiKey();
+    if (!apiKey) return; 
+
+    extractTextBtn.innerText = "Reading Image...";
+    extractTextBtn.disabled = true;
+
+    try {
+        const base64Data = currentActiveImageSrc.split(',')[1];
+        const mimeType = currentActiveImageSrc.split(';')[0].split(':')[1] || "image/jpeg";
+
+        const promptText = "Read all the handwritten or printed text in this image. Format it cleanly as text notes. If there are math equations, write them out clearly in plain text format so they can be read aloud by a text-to-speech engine.";
+        
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: promptText },
+                        { inlineData: { mimeType: mimeType, data: base64Data } }
+                    ]
+                }]
+            })
+        });
+
+        const data = await response.json();
+        
+        if (data.error) throw new Error(data.error.message);
+
+        const extractedText = data.candidates[0].content.parts[0].text;
+
+        if (!textNotes[currentClass]) textNotes[currentClass] = [];
+        textNotes[currentClass].push({ title: title, content: extractedText.trim() });
+        localStorage.setItem("textNotes", JSON.stringify(textNotes));
+        
+        loadTextNotes();
+        extractTextBtn.innerText = "Saved to Text Notes!";
+        
+        setTimeout(() => { 
+            modal.style.display = "none"; 
+            extractTextBtn.innerText = "Extract Text"; 
+            extractTextBtn.disabled = false;
+        }, 1500);
+
+    } catch (error) {
+        console.error("Vision API Error Details:", error);
+        alert(`Extraction failed! Error: ${error.message}`);
+        extractTextBtn.innerText = "Extract Text";
+        extractTextBtn.disabled = false;
+    }
+});
+
+// --- REEL MODE & AI TUTOR ---
 const reelContainer = document.getElementById('reel-container');
 const reelTextOverlay = document.getElementById('reel-text-overlay');
 let speechInstance = null;
 
-let GEMINI_API_KEY = localStorage.getItem("geminiApiKey");
-if (!GEMINI_API_KEY) {
-    GEMINI_API_KEY = prompt("Enter Gemini API Key:");
-    if (GEMINI_API_KEY) localStorage.setItem("geminiApiKey", GEMINI_API_KEY);
-}
-
 async function generateTutorScript(rawNotes) {
+    const apiKey = getApiKey();
+    if (!apiKey) return "Error generating script. No API Key.";
+
     const prompt = `You are a fun, energetic tutor making a short-form video. Take the following class notes and rewrite them into a punchy, easy-to-understand tutor script. Explain the concepts simply yet infoirmative like you're talking to a friend. Do NOT use emojis, asterisks, hashtags, or formatting. Just output the plain text script for a text-to-speech engine. Here are the notes: ${rawNotes}`;
+    
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
         const data = await response.json();
+        
+        if (data.error) throw new Error(data.error.message);
+        
         return data.candidates[0].content.parts[0].text;
-    } catch (error) { return "Error generating script. Check console."; }
+    } catch (error) { 
+        console.error("Tutor API Error:", error);
+        return "Error generating script. Check console."; 
+    }
 }
 
 document.getElementById('start-reel-btn').addEventListener('click', async () => {
-    // 1. Wake up the TTS Engine
     window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); 
     reelContainer.classList.remove('hidden');
     
-    // 2. Check for empty notes
     if (!textNotes[currentClass] || textNotes[currentClass].length === 0) { 
         reelTextOverlay.innerText = "NO NOTES TO READ"; 
         return; 
     }
 
-    // 3. Format the notes securely (WITH SMART SELECTION)
     let notesToRead = textNotes[currentClass];
     
     if (isNoteSelectMode && selectedNoteIndices.size > 0) {
@@ -542,10 +639,8 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
 
     reelTextOverlay.innerText = "LOADING REEL...";
 
-    // 4. Safely call the AI and handle the script
     try {
         const aiScript = await generateTutorScript(rawScriptText);
-        
         const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
@@ -564,7 +659,6 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
         };
         
         speechInstance.onend = () => reelTextOverlay.innerText = "FINISHED";
-        
         window.speechSynthesis.speak(speechInstance);
 
     } catch (error) {
@@ -573,6 +667,10 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
     }
 });
 
+document.getElementById('close-reel-btn').addEventListener('click', () => {
+    reelContainer.classList.add('hidden');
+    window.speechSynthesis.cancel();
+});
 document.getElementById('close-reel-btn').addEventListener('click', () => {
     reelContainer.classList.add('hidden');
     window.speechSynthesis.cancel();
