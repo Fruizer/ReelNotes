@@ -9,6 +9,8 @@ const classButtonsDiv = document.getElementById("class-buttons");
 const classSearchInput = document.getElementById("class-search");
 const noteSearchInput = document.getElementById("note-search");
 const textNoteTitleInput = document.getElementById("text-note-title");
+const textNotesList = document.getElementById("text-notes-list");
+const textNoteInput = document.getElementById("text-note-input");
 
 // Data fallback
 let subjects = JSON.parse(localStorage.getItem("subjects")) || JSON.parse(localStorage.getItem("classes")) || [];
@@ -137,6 +139,31 @@ document.getElementById("confirm-add").addEventListener("click", () => {
     }
 });
 
+// ---  CONFIRM MODAL LOGIC ---
+const confirmModal = document.getElementById("custom-confirm-modal");
+const confirmMessage = document.getElementById("confirm-modal-message");
+const acceptConfirmBtn = document.getElementById("accept-confirm-btn");
+const cancelConfirmBtn = document.getElementById("cancel-confirm-btn");
+
+let confirmCallback = null;
+
+function showCustomConfirm(message, callback) {
+    confirmMessage.innerText = message;
+    confirmCallback = callback;
+    confirmModal.classList.remove("hidden");
+}
+
+cancelConfirmBtn.addEventListener("click", () => {
+    confirmModal.classList.add("hidden");
+    confirmCallback = null; // Clear it out
+});
+
+acceptConfirmBtn.addEventListener("click", () => {
+    confirmModal.classList.add("hidden");
+    if (confirmCallback) confirmCallback();
+    confirmCallback = null;
+});
+
 // --- EDIT MODE LOGIC  ---
 const defaultActions = document.getElementById("default-actions");
 const editActions = document.getElementById("edit-actions");
@@ -168,7 +195,8 @@ document.getElementById("cancel-edit-mode").addEventListener("click", toggleEdit
 document.getElementById("delete-selected").addEventListener("click", () => {
     if (subjectsToDelete.size === 0) return;
     
-    if (confirm(`Are you sure you want to delete ${subjectsToDelete.size} subject(s)? This will wipe all their notes.`)) {
+    // NEW CUSTOM MODAL CALL
+    showCustomConfirm(`Are you sure you want to delete ${subjectsToDelete.size} subject(s)? This will wipe all their notes.`, () => {
         subjects = subjects.filter(s => !subjectsToDelete.has(s));
         
         subjectsToDelete.forEach(sub => {
@@ -181,7 +209,7 @@ document.getElementById("delete-selected").addEventListener("click", () => {
         localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
         
         toggleEditMode(); // Exit edit mode
-    }
+    });
 });
 
 // --- WORKSPACE NAVIGATION LOGIC ---
@@ -211,9 +239,7 @@ document.getElementById("back-to-dashboard").addEventListener("click", () => {
     currentClass = ""; 
 });
 
-// --- TEXT NOTES LOGIC (Smart Selection + Collapsible) ---
-const textNotesList = document.getElementById("text-notes-list");
-const textNoteInput = document.getElementById("text-note-input");
+// --- TEXT NOTES LOGIC ---
 
 function loadTextNotes() {
     textNotesList.innerHTML = "";
@@ -341,20 +367,22 @@ editSelectedBtn.addEventListener("click", () => {
 });
 
 deleteSelectedBtnNotes.addEventListener("click", () => {
-    if (selectedNoteIndices.size > 0 && confirm(`Delete ${selectedNoteIndices.size} selected note(s)?`)) {
-        const indicesToDelete = Array.from(selectedNoteIndices).sort((a, b) => b - a);
-        indicesToDelete.forEach(index => textNotes[currentClass].splice(index, 1));
-        
-        localStorage.setItem("textNotes", JSON.stringify(textNotes));
-        toggleSelectBtn.click(); 
+    if (selectedNoteIndices.size > 0) {
+        // NEW CUSTOM MODAL CALL
+        showCustomConfirm(`Delete ${selectedNoteIndices.size} selected note(s)?`, () => {
+            const indicesToDelete = Array.from(selectedNoteIndices).sort((a, b) => b - a);
+            indicesToDelete.forEach(index => textNotes[currentClass].splice(index, 1));
+            
+            localStorage.setItem("textNotes", JSON.stringify(textNotes));
+            toggleSelectBtn.click(); // Exit select mode
+        });
     }
 });
-
 // Sort Button Logic for Object-based notes
 document.getElementById("sort-text-notes").addEventListener("click", () => {
     if (textNotes[currentClass]) {
         textNotes[currentClass].sort((a, b) => {
-            // Check if it's the new Title/Content format, or an old plain text note
+            
             const titleA = (typeof a === 'object' && a !== null) ? a.title.toLowerCase() : a.toLowerCase();
             const titleB = (typeof b === 'object' && b !== null) ? b.title.toLowerCase() : b.toLowerCase();
             return titleA.localeCompare(titleB);
@@ -402,7 +430,7 @@ document.getElementById("save-image-note").addEventListener("click", () => {
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-            // COMPRESSION ENGINE: Shrinks the image using an invisible Canvas
+  
             const canvas = document.createElement("canvas");
             const MAX_WIDTH = 1200; // Limits max width
             const MAX_HEIGHT = 1200; // Limits max height
@@ -422,7 +450,6 @@ document.getElementById("save-image-note").addEventListener("click", () => {
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, width, height);
 
-            // Convert to a compressed JPEG string (0.7 = 70% quality)
             const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
 
             try {
@@ -442,11 +469,12 @@ document.getElementById("save-image-note").addEventListener("click", () => {
 });
 
 function deletePictureNote(index) {
-    if (confirm("Delete picture?")) {
+    // NEW CUSTOM MODAL CALL
+    showCustomConfirm("Delete this picture note?", () => {
         pictureNotes[currentClass].splice(index, 1);
         localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
         loadPictureNotes();
-    }
+    });
 }
 
 // --- PHOTO MODAL ---

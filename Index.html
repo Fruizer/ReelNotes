@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReelNotes v2.0</title>
+    <title>ReelNotes</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
+    <!-- === DASHBOARD MENU === -->
     <div class="container dark-container" id="main-menu">
-
         <div class="top-nav">
             <div class="brand-logo">ReelNotes</div>
             <div class="user-profile">
-                <!-- Simple SVG icon for the user -->
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                     <circle cx="12" cy="7" r="4"></circle>
@@ -43,13 +42,14 @@
             <input type="text" id="class-search" class="dark-input search-bar" placeholder="Search subjects...">
         </div>
 
-        <div id="class-buttons" class="bento-grid">
-            </div>
+        <div id="class-buttons" class="bento-grid"></div>
     </div>
 
+    <!-- === MODALS === -->
+    <!-- Add Subject Modal -->
     <div id="custom-add-modal" class="dark-overlay hidden">
         <div class="dark-modal-box">
-            <h2>Add New Subject</h2>
+            <h2 style="color: #F8FAFC; margin-top: 0;">Add New Subject</h2>
             <input type="text" id="new-subject-input" class="dark-input full-width" placeholder="e.g., Object Oriented Programming">
             <div class="modal-buttons">
                 <button id="cancel-add" class="btn-ghost">Cancel</button>
@@ -58,7 +58,19 @@
         </div>
     </div>
 
-  <!-- THE WORKSPACE -->
+    <!-- Custom Confirmation Modal -->
+    <div id="custom-confirm-modal" class="dark-overlay hidden">
+        <div class="dark-modal-box">
+            <h2 style="margin-top: 0; color: #F8FAFC;">Are you sure?</h2>
+            <p id="confirm-modal-message" style="color: #94A3B8; margin-bottom: 20px;">Do you really want to do this?</p>
+            <div class="modal-buttons">
+                <button id="cancel-confirm-btn" class="btn-ghost">Cancel</button>
+                <button id="accept-confirm-btn" class="btn-ghost-danger" style="background-color: #EF4444; color: white;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- === THE WORKSPACE === -->
     <div class="container dark-container hidden" id="workspace-container" style="max-width: 100%; width: 100%; padding: 0; display: flex; height: 85vh; border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
         
         <!-- SIDEBAR -->
@@ -83,27 +95,21 @@
             <div id="view-text-notes" class="content-view">
                 <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Text Notes</h2>
                 
-                <!-- TITLE & CONTENT INPUTS -->
                 <input type="text" id="text-note-title" class="dark-input full-width" placeholder="Note Title (e.g., Chapter 1: Introduction)" style="margin-bottom: 10px; font-weight: bold; font-size: 1.1rem;">
                 <textarea id="text-note-input" class="dark-input full-width" rows="5" placeholder="Paste or type your note content here..."></textarea>
                 
-                <!-- BUTTON CLUSTER  -->
                 <div style="display: flex; gap: 10px; margin-top: 15px; align-items: center; flex-wrap: wrap;">
                     <button id="save-text-note" class="btn-primary">Save Note</button>
                     <button id="toggle-select-notes" class="btn-ghost">Select Notes</button>
+                    <button id="sort-text-notes" class="btn-ghost">Sort A-Z</button>
                     
-                    <!-- Dynamic Edit/Delete (These magically appear next to 'Select Notes' when you click it) -->
                     <div id="dynamic-action-bar" class="hidden" style="display: flex; gap: 10px;">
                         <button id="edit-selected-note" class="btn-ghost">Edit Selected</button>
                         <button id="delete-selected-notes" class="btn-ghost-danger">Delete Selected</button>
                     </div>
                 </div>
 
-                <!-- FULL WIDTH SEARCH & SORT -->
                 <input type="text" id="note-search" class="dark-input full-width" placeholder="Search notes..." style="margin-top: 25px;">
-                <button id="sort-text-notes" class="btn-ghost" style="margin-top: 10px;">Sort A-Z</button>
-
-                <!-- THE NOTES LIST -->
                 <ul id="text-notes-list" class="dark-list" style="margin-top: 20px;"></ul>
             </div>
 
@@ -120,6 +126,7 @@
         </div>
     </div>  
 
+    <!-- === FULLSCREEN OVERLAYS === -->
     <div id="photo-modal" class="modal">
         <span class="close">&times;</span>
         <img class="modal-content" id="modal-img">
