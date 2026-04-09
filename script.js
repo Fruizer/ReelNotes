@@ -164,6 +164,8 @@ async function checkSession() {
         if (dropdownName) dropdownName.innerText = savedName;
         if (dropdownEmail) dropdownEmail.innerText = currentUser.email;
         
+        // Download their subjects from the cloud
+        fetchSubjectsFromCloud();
     } else {
         currentUser = null;
         authContainer.classList.remove("hidden");
@@ -175,33 +177,57 @@ async function checkSession() {
 // Run this immediately when the page loads
 checkSession();
 
-// Data fallback
-let subjects = JSON.parse(localStorage.getItem("subjects")) || JSON.parse(localStorage.getItem("classes")) || [];
-let textNotes = JSON.parse(localStorage.getItem("textNotes")) || {};
-let pictureNotes = JSON.parse(localStorage.getItem("pictureNotes")) || {};
-let pinnedSubjects = JSON.parse(localStorage.getItem("pinnedSubjects")) || [];
+// --- CLOUD DATA VARIABLES ---
+let subjects = []; // Fetched from cloud on login
+let textNotes = {}; // Fetched from cloud when opening a subject
+let pictureNotes = {}; // Fetched from cloud when opening a subject
+let pinnedSubjects = JSON.parse(localStorage.getItem("pinnedSubjects")) || []; // Pins stay local so your device remembers your layout
 let isNoteSelectMode = false;
 let selectedNoteIndices = new Set();
 let currentClass = "";
 let selectedNoteIndex = null;
-
-// New Edit Mode State
 let isEditMode = false;
 let subjectsToDelete = new Set();
 
 // Run immediately
 window.onload = () => {
-    localStorage.setItem("subjects", JSON.stringify(subjects));
     updateSubjectDisplay();
 };
 
-// --- DASHBOARD LOGIC ---
+// --- CLOUD DATABASE FETCHING ---
+async function fetchSubjectsFromCloud() {
+    const { data, error } = await supabase.from('subjects').select('name');
+    if (!error && data) {
+        subjects = data.map(row => row.name);
+        updateSubjectDisplay();
+    }
+}
 
+async function fetchNotesFromCloud(subjectName) {
+    textNotes[subjectName] = [];
+    pictureNotes[subjectName] = [];
+    
+    const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('subject_name', subjectName);
+        
+    if (!error && data) {
+        data.forEach(note => {
+            if (note.note_type === 'text') {
+                textNotes[subjectName].push({ id: note.id, title: note.title, content: note.content });
+            } else if (note.note_type === 'picture') {
+                pictureNotes[subjectName].push({ id: note.id, content: note.content });
+            }
+        });
+    }
+}
+
+// --- DASHBOARD LOGIC ---
 function updateSubjectDisplay() {
     classButtonsDiv.innerHTML = "";
     const searchText = classSearchInput.value.toLowerCase();
     
-    // SORTING: Pinned subjects go to the top, then alphabetical
     let sortedSubjects = [...subjects].sort((a, b) => {
         const aPinned = pinnedSubjects.includes(a);
         const bPinned = pinnedSubjects.includes(b);
@@ -210,26 +236,14 @@ function updateSubjectDisplay() {
         return a.localeCompare(b); 
     });
     
-    sortedSubjects
-        .filter(s => s.toLowerCase().includes(searchText))
-        .forEach((subjectName) => {
+    sortedSubjects.filter(s => s.toLowerCase().includes(searchText)).forEach((subjectName) => {
             const button = document.createElement("button");
             button.className = "subject-btn"; 
-            
             const isPinned = pinnedSubjects.includes(subjectName);
             
             button.innerHTML = `
-                ${!isEditMode ? `
-                <div class="pin-btn ${isPinned ? 'pinned' : ''}" data-subject="${subjectName}">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21.1 16.3l-5.4-5.4V4.1l1.5-1.5L14.6 0l-1.5 1.5v6.8L7.7 2.9 6.3 4.3l5.4 5.4H4.9l-1.5 1.5L6 14.6l-1.5 1.5h6.8l-5.4 5.4 1.4 1.4 5.4-5.4v6.8l1.5-1.5-2.6-2.6 5.4-5.4z"/>
-                    </svg>
-                </div>` : ''}
-                <div class="card-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                </div>
+                ${!isEditMode ? `<div class="pin-btn ${isPinned ? 'pinned' : ''}" data-subject="${subjectName}"><svg width="16" height="16" viewBox="0 0 24 24" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.1 16.3l-5.4-5.4V4.1l1.5-1.5L14.6 0l-1.5 1.5v6.8L7.7 2.9 6.3 4.3l5.4 5.4H4.9l-1.5 1.5L6 14.6l-1.5 1.5h6.8l-5.4 5.4 1.4 1.4 5.4-5.4v6.8l1.5-1.5-2.6-2.6 5.4-5.4z"/></svg></div>` : ''}
+                <div class="card-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></div>
                 <div class="card-title">${subjectName}</div>
                 <div class="card-footer">Open Workspace &rarr;</div>
             `;
@@ -239,15 +253,11 @@ function updateSubjectDisplay() {
                 if (subjectsToDelete.has(subjectName)) button.classList.add("selected-for-delete");
             }
 
-            button.addEventListener("click", (e) => {
-                // PIN LOGIC
+            button.addEventListener("click", async (e) => {
                 if (e.target.closest('.pin-btn')) {
-                    e.stopPropagation(); // Stops the workspace from opening
-                    if (isPinned) {
-                        pinnedSubjects = pinnedSubjects.filter(s => s !== subjectName);
-                    } else {
-                        pinnedSubjects.push(subjectName);
-                    }
+                    e.stopPropagation(); 
+                    if (isPinned) pinnedSubjects = pinnedSubjects.filter(s => s !== subjectName);
+                    else pinnedSubjects.push(subjectName);
                     localStorage.setItem("pinnedSubjects", JSON.stringify(pinnedSubjects));
                     updateSubjectDisplay();
                     return;
@@ -265,7 +275,13 @@ function updateSubjectDisplay() {
                 } else {
                     currentClass = subjectName;
                     mainMenu.classList.add("hidden");
+                    
+                    document.getElementById("workspace-title").innerText = "Loading notes...";
                     workspaceContainer.classList.remove("hidden");
+                    
+                    // CLOUD FETCH: Get notes before showing!
+                    await fetchNotesFromCloud(subjectName);
+                    
                     document.getElementById("workspace-title").innerText = subjectName;
                     switchWorkspaceView('text');
                 }
@@ -286,28 +302,35 @@ document.getElementById("show-add-modal").addEventListener("click", () => {
     newSubjectInput.focus();
 });
 
-document.getElementById("cancel-add").addEventListener("click", () => {
-    addModal.classList.add("hidden");
-});
+document.getElementById("cancel-add").addEventListener("click", () => addModal.classList.add("hidden"));
 
-document.getElementById("confirm-add").addEventListener("click", () => {
+document.getElementById("confirm-add").addEventListener("click", async () => {
     const subjectName = newSubjectInput.value.trim();
     if (subjectName && !subjects.includes(subjectName)) {
-        subjects.push(subjectName);
-        localStorage.setItem("subjects", JSON.stringify(subjects));
-        updateSubjectDisplay();
-        addModal.classList.add("hidden");
+        
+        document.getElementById("confirm-add").innerText = "Saving...";
+        
+        // Save Subject to Cloud!
+        const { error } = await supabase.from('subjects').insert([{ name: subjectName, user_id: currentUser.id }]); 
+            
+        document.getElementById("confirm-add").innerText = "Create";
+        if (error) {
+            alert("Error saving: " + error.message);
+        } else {
+            subjects.push(subjectName);
+            updateSubjectDisplay();
+            addModal.classList.add("hidden");
+        }
     } else if (subjects.includes(subjectName)) {
         alert("Subject already exists!");
     }
 });
 
-// ---  CONFIRM MODAL LOGIC ---
+// --- CONFIRM MODAL LOGIC ---
 const confirmModal = document.getElementById("custom-confirm-modal");
 const confirmMessage = document.getElementById("confirm-modal-message");
 const acceptConfirmBtn = document.getElementById("accept-confirm-btn");
 const cancelConfirmBtn = document.getElementById("cancel-confirm-btn");
-
 let confirmCallback = null;
 
 function showCustomConfirm(message, callback) {
@@ -316,18 +339,10 @@ function showCustomConfirm(message, callback) {
     confirmModal.classList.remove("hidden");
 }
 
-cancelConfirmBtn.addEventListener("click", () => {
-    confirmModal.classList.add("hidden");
-    confirmCallback = null; // Clear it out
-});
+cancelConfirmBtn.addEventListener("click", () => { confirmModal.classList.add("hidden"); confirmCallback = null; });
+acceptConfirmBtn.addEventListener("click", () => { confirmModal.classList.add("hidden"); if (confirmCallback) confirmCallback(); confirmCallback = null; });
 
-acceptConfirmBtn.addEventListener("click", () => {
-    confirmModal.classList.add("hidden");
-    if (confirmCallback) confirmCallback();
-    confirmCallback = null;
-});
-
-// --- EDIT MODE LOGIC  ---
+// --- EDIT MODE LOGIC ---
 const defaultActions = document.getElementById("default-actions");
 const editActions = document.getElementById("edit-actions");
 const deleteSelectedBtnDashboard = document.getElementById("delete-selected");
@@ -335,62 +350,41 @@ const deleteSelectedBtnDashboard = document.getElementById("delete-selected");
 function toggleEditMode() {
     isEditMode = !isEditMode;
     subjectsToDelete.clear();
-    
-    if (isEditMode) {
-        defaultActions.classList.add("hidden");
-        editActions.classList.remove("hidden");
-    } else {
-        defaultActions.classList.remove("hidden");
-        editActions.classList.add("hidden");
-    }
-    
+    if (isEditMode) { defaultActions.classList.add("hidden"); editActions.classList.remove("hidden"); } 
+    else { defaultActions.classList.remove("hidden"); editActions.classList.add("hidden"); }
     updateDeleteButtonText();
     updateSubjectDisplay();
 }
 
-function updateDeleteButtonText() {
-    deleteSelectedBtnDashboard.innerText = `Delete Selected (${subjectsToDelete.size})`;
-}
+function updateDeleteButtonText() { deleteSelectedBtnDashboard.innerText = `Delete Selected (${subjectsToDelete.size})`; }
 
 document.getElementById("toggle-edit-mode").addEventListener("click", toggleEditMode);
 document.getElementById("cancel-edit-mode").addEventListener("click", toggleEditMode);
 
 document.getElementById("delete-selected").addEventListener("click", () => {
     if (subjectsToDelete.size === 0) return;
-    
-    // NEW CUSTOM MODAL CALL
-    showCustomConfirm(`Are you sure you want to delete ${subjectsToDelete.size} subject(s)? This will wipe all their notes.`, () => {
+    showCustomConfirm(`Are you sure you want to delete ${subjectsToDelete.size} subject(s)? This will wipe all their notes.`, async () => {
+        
+        const subsArray = Array.from(subjectsToDelete);
+        deleteSelectedBtnDashboard.innerText = "Deleting...";
+
+        // Wipe from Cloud!
+        await supabase.from('notes').delete().in('subject_name', subsArray);
+        await supabase.from('subjects').delete().in('name', subsArray);
+        
         subjects = subjects.filter(s => !subjectsToDelete.has(s));
+        subsArray.forEach(sub => { delete textNotes[sub]; delete pictureNotes[sub]; });
         
-        subjectsToDelete.forEach(sub => {
-            delete textNotes[sub];
-            delete pictureNotes[sub];
-        });
-        
-        localStorage.setItem("subjects", JSON.stringify(subjects));
-        localStorage.setItem("textNotes", JSON.stringify(textNotes));
-        localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
-        
-        toggleEditMode(); // Exit edit mode
+        toggleEditMode();
     });
 });
 
 // --- WORKSPACE NAVIGATION LOGIC ---
 function switchWorkspaceView(viewType) {
-    navTextNotes.classList.remove("active");
-    navPictureNotes.classList.remove("active");
-    viewTextNotes.classList.add("hidden");
-    viewPictureNotes.classList.add("hidden");
-    
-    if (viewType === 'text') {
-        navTextNotes.classList.add("active");
-        viewTextNotes.classList.remove("hidden");
-        loadTextNotes();
-    } else {
-        navPictureNotes.classList.add("active");
-        viewPictureNotes.classList.remove("hidden");
-        loadPictureNotes();
-    }
+    navTextNotes.classList.remove("active"); navPictureNotes.classList.remove("active");
+    viewTextNotes.classList.add("hidden"); viewPictureNotes.classList.add("hidden");
+    if (viewType === 'text') { navTextNotes.classList.add("active"); viewTextNotes.classList.remove("hidden"); loadTextNotes(); } 
+    else { navPictureNotes.classList.add("active"); viewPictureNotes.classList.remove("hidden"); loadPictureNotes(); }
 }
 
 navTextNotes.addEventListener("click", () => switchWorkspaceView('text'));
@@ -403,23 +397,19 @@ document.getElementById("back-to-dashboard").addEventListener("click", () => {
 });
 
 // --- TEXT NOTES LOGIC ---
-
 function loadTextNotes() {
     textNotesList.innerHTML = "";
     const searchText = noteSearchInput.value.toLowerCase();
-    
     if (isNoteSelectMode) textNotesList.classList.add("select-mode-active");
     else textNotesList.classList.remove("select-mode-active");
     
     if (textNotes[currentClass]) {
         textNotes[currentClass].forEach((noteData, index) => {
-            const isObj = typeof noteData === 'object' && noteData !== null;
-            const title = isObj ? noteData.title : `Note ${index + 1}`;
-            const content = isObj ? noteData.content : noteData;
+            const title = noteData.title;
+            const content = noteData.content;
 
             if (title.toLowerCase().includes(searchText) || content.toLowerCase().includes(searchText)) {
                 const li = document.createElement("li");
-                
                 const isChecked = selectedNoteIndices.has(index) ? "checked" : "";
                 const previewText = content.length > 80 ? content.substring(0, 80) + "..." : content;
                 
@@ -435,14 +425,10 @@ function loadTextNotes() {
 
                 li.addEventListener("click", (e) => {
                     if (window.getSelection().toString().length > 0) return;
-
                     if (isNoteSelectMode) {
                         const checkbox = li.querySelector('.note-checkbox');
                         if (e.target !== checkbox) checkbox.checked = !checkbox.checked; 
-                        
-                        if (checkbox.checked) selectedNoteIndices.add(index);
-                        else selectedNoteIndices.delete(index);
-                        
+                        if (checkbox.checked) selectedNoteIndices.add(index); else selectedNoteIndices.delete(index);
                         updateNoteSelectionUI();
                     } else {
                         li.classList.toggle("expanded");
@@ -454,21 +440,32 @@ function loadTextNotes() {
     }
 }
 
-document.getElementById("save-text-note").addEventListener("click", () => {
+document.getElementById("save-text-note").addEventListener("click", async () => {
     const title = textNoteTitleInput.value.trim() || "Untitled Note";
     const content = textNoteInput.value.trim();
+    const btn = document.getElementById("save-text-note");
     
     if (content) {
-        const noteObj = { title, content };
+        btn.innerText = "Saving to Cloud...";
         
         if (selectedNoteIndex !== null) {
-            textNotes[currentClass][selectedNoteIndex] = noteObj;
+            // Update Cloud Note
+            const noteId = textNotes[currentClass][selectedNoteIndex].id;
+            await supabase.from('notes').update({ title, content }).eq('id', noteId);
+            textNotes[currentClass][selectedNoteIndex] = { id: noteId, title, content };
             selectedNoteIndex = null;
         } else {
-            if (!textNotes[currentClass]) textNotes[currentClass] = [];
-            textNotes[currentClass].push(noteObj);
+            // Insert New Cloud Note
+            const { data } = await supabase.from('notes').insert([{ 
+                user_id: currentUser.id, subject_name: currentClass, note_type: 'text', title, content 
+            }]).select();
+            if (data) {
+                if (!textNotes[currentClass]) textNotes[currentClass] = [];
+                textNotes[currentClass].push({ id: data[0].id, title, content });
+            }
         }
-        localStorage.setItem("textNotes", JSON.stringify(textNotes));
+        
+        btn.innerText = "Save Note";
         textNoteTitleInput.value = "";
         textNoteInput.value = "";
         loadTextNotes();
@@ -487,33 +484,22 @@ const toggleSelectBtn = document.getElementById("toggle-select-notes");
 toggleSelectBtn.addEventListener("click", () => {
     isNoteSelectMode = !isNoteSelectMode;
     selectedNoteIndices.clear(); 
-    
     if (isNoteSelectMode) {
-        toggleSelectBtn.innerText = "Cancel Selection";
-        toggleSelectBtn.style.color = "#EF4444";
-        toggleSelectBtn.style.borderColor = "#EF4444";
+        toggleSelectBtn.innerText = "Cancel Selection"; toggleSelectBtn.style.color = "#EF4444"; toggleSelectBtn.style.borderColor = "#EF4444";
     } else {
-        toggleSelectBtn.innerText = "Select Notes";
-        toggleSelectBtn.style.color = ""; 
-        toggleSelectBtn.style.borderColor = "";
+        toggleSelectBtn.innerText = "Select Notes"; toggleSelectBtn.style.color = ""; toggleSelectBtn.style.borderColor = "";
     }
-    
-    updateNoteSelectionUI();
-    loadTextNotes(); 
+    updateNoteSelectionUI(); loadTextNotes(); 
 });
 
 function updateNoteSelectionUI() {
     if (selectedNoteIndices.size > 0) {
         startReelBtn.innerText = `▶ START REEL (${selectedNoteIndices.size} Selected)`;
         dynamicActionBar.classList.remove("hidden");
-        
-        if (selectedNoteIndices.size === 1) editSelectedBtn.classList.remove("hidden");
-        else editSelectedBtn.classList.add("hidden");
-        
+        if (selectedNoteIndices.size === 1) editSelectedBtn.classList.remove("hidden"); else editSelectedBtn.classList.add("hidden");
         deleteSelectedBtnNotes.innerText = `Delete (${selectedNoteIndices.size})`;
     } else {
-        startReelBtn.innerText = `▶ START REEL`;
-        dynamicActionBar.classList.add("hidden");
+        startReelBtn.innerText = `▶ START REEL`; dynamicActionBar.classList.add("hidden");
     }
 }
 
@@ -521,37 +507,31 @@ editSelectedBtn.addEventListener("click", () => {
     if (selectedNoteIndices.size === 1) {
         const indexToEdit = Array.from(selectedNoteIndices)[0];
         const noteData = textNotes[currentClass][indexToEdit];
-        const isObj = typeof noteData === 'object' && noteData !== null;
-        
-        textNoteTitleInput.value = isObj ? noteData.title : `Note ${indexToEdit + 1}`;
-        textNoteInput.value = isObj ? noteData.content : noteData;
-        
-        textNotes[currentClass].splice(indexToEdit, 1);
+        textNoteTitleInput.value = noteData.title;
+        textNoteInput.value = noteData.content;
+        selectedNoteIndex = indexToEdit; 
         toggleSelectBtn.click(); 
     }
 });
 
 deleteSelectedBtnNotes.addEventListener("click", () => {
     if (selectedNoteIndices.size > 0) {
-        showCustomConfirm(`Delete ${selectedNoteIndices.size} selected note(s)?`, () => {
+        showCustomConfirm(`Delete ${selectedNoteIndices.size} selected note(s)?`, async () => {
             const indicesToDelete = Array.from(selectedNoteIndices).sort((a, b) => b - a);
-            indicesToDelete.forEach(index => textNotes[currentClass].splice(index, 1));
             
-            localStorage.setItem("textNotes", JSON.stringify(textNotes));
-            toggleSelectBtn.click(); // Exit select mode
+            // Delete from Cloud via ID!
+            const idsToDelete = indicesToDelete.map(index => textNotes[currentClass][index].id);
+            await supabase.from('notes').delete().in('id', idsToDelete);
+            
+            indicesToDelete.forEach(index => textNotes[currentClass].splice(index, 1));
+            toggleSelectBtn.click(); 
         });
     }
 });
-// Sort Button Logic for Object-based notes
+
 document.getElementById("sort-text-notes").addEventListener("click", () => {
     if (textNotes[currentClass]) {
-        textNotes[currentClass].sort((a, b) => {
-            
-            const titleA = (typeof a === 'object' && a !== null) ? a.title.toLowerCase() : a.toLowerCase();
-            const titleB = (typeof b === 'object' && b !== null) ? b.title.toLowerCase() : b.toLowerCase();
-            return titleA.localeCompare(titleB);
-        });
-        localStorage.setItem("textNotes", JSON.stringify(textNotes));
+        textNotes[currentClass].sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
         loadTextNotes();
     }
 });
@@ -563,10 +543,10 @@ const imageInput = document.getElementById("image-input");
 function loadPictureNotes() {
     pictureNotesList.innerHTML = "";
     if (pictureNotes[currentClass]) {
-        pictureNotes[currentClass].forEach((imageSrc, index) => {
+        pictureNotes[currentClass].forEach((picObj, index) => {
             const li = document.createElement("li");
             const img = document.createElement("img");
-            img.src = imageSrc;
+            img.src = picObj.content; // Render from Cloud object
             li.appendChild(img);
             
             const deleteBtn = document.createElement("button");
@@ -577,54 +557,47 @@ function loadPictureNotes() {
             
             li.appendChild(deleteBtn);
             pictureNotesList.appendChild(li);
-            img.addEventListener("click", () => showPhotoModal(imageSrc));
+            img.addEventListener("click", () => showPhotoModal(picObj.content));
         });
     }
 }
 
 document.getElementById("save-image-note").addEventListener("click", () => {
     const file = imageInput.files[0];
-    if (!file) {
-        alert("Please select an image first!");
-        return;
-    }
+    if (!file) { alert("Please select an image first!"); return; }
 
     const reader = new FileReader();
     reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-  
             const canvas = document.createElement("canvas");
-            const MAX_WIDTH = 1200; // Limits max width
-            const MAX_HEIGHT = 1200; // Limits max height
-            let width = img.width;
-            let height = img.height;
+            const MAX_WIDTH = 1200; const MAX_HEIGHT = 1200;
+            let width = img.width; let height = img.height;
 
-            if (width > height && width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
-            } else if (height > MAX_HEIGHT) {
-                width *= MAX_HEIGHT / height;
-                height = MAX_HEIGHT;
-            }
+            if (width > height && width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } 
+            else if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
 
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext("2d");
             ctx.drawImage(img, 0, 0, width, height);
-
             const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
 
-            try {
-                if (!pictureNotes[currentClass]) pictureNotes[currentClass] = [];
-                pictureNotes[currentClass].push(compressedDataUrl);
-                localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
-                imageInput.value = "";
-                loadPictureNotes();
-            } catch (error) {
-                console.error("Storage Error:", error);
-                alert("Browser Storage is completely full! Time to migrate to Supabase.");
-            }
+            const uploadBtn = document.getElementById("save-image-note");
+            uploadBtn.innerText = "Uploading to Cloud...";
+
+            // Send Image string to Cloud!
+            supabase.from('notes').insert([{
+                user_id: currentUser.id, subject_name: currentClass, note_type: 'picture', title: 'Picture Note', content: compressedDataUrl
+            }]).select().then(({ data, error }) => {
+                uploadBtn.innerText = "Upload";
+                if (error) alert("Upload failed: " + error.message);
+                else {
+                    if (!pictureNotes[currentClass]) pictureNotes[currentClass] = [];
+                    pictureNotes[currentClass].push({ id: data[0].id, content: compressedDataUrl });
+                    imageInput.value = "";
+                    loadPictureNotes();
+                }
+            });
         };
         img.src = e.target.result;
     };
@@ -632,9 +605,10 @@ document.getElementById("save-image-note").addEventListener("click", () => {
 });
 
 function deletePictureNote(index) {
-    showCustomConfirm("Delete this picture note?", () => {
+    showCustomConfirm("Delete this picture note?", async () => {
+        const noteId = pictureNotes[currentClass][index].id;
+        await supabase.from('notes').delete().eq('id', noteId); // Wipe from Cloud
         pictureNotes[currentClass].splice(index, 1);
-        localStorage.setItem("pictureNotes", JSON.stringify(pictureNotes));
         loadPictureNotes();
     });
 }
@@ -657,26 +631,19 @@ let scale = 1;
 let currentActiveImageSrc = ""; 
 
 function showPhotoModal(src) {
-    modal.style.display = "block";
-    modalImg.src = src;
-    currentActiveImageSrc = src;
-    scale = 1; 
-    modalImg.style.transform = `scale(${scale})`;
-    
-    extractTextBtn.innerText = "Extract Text";
-    extractTextBtn.disabled = false;
+    modal.style.display = "block"; modalImg.src = src; currentActiveImageSrc = src;
+    scale = 1; modalImg.style.transform = `scale(${scale})`;
+    extractTextBtn.innerText = "Extract Text"; extractTextBtn.disabled = false;
 }
 
 document.getElementsByClassName("close")[0].onclick = () => modal.style.display = "none";
 window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
-
 document.getElementById("zoom-in").onclick = () => { scale += 0.1; modalImg.style.transform = `scale(${scale})`; };
 document.getElementById("zoom-out").onclick = () => { if (scale > 0.2) { scale -= 0.1; modalImg.style.transform = `scale(${scale})`; } };
 
 modalImg.addEventListener("wheel", (e) => {
     e.preventDefault(); 
-    if (e.deltaY < 0) scale += 0.1; 
-    else if (scale > 0.2) scale -= 0.1; 
+    if (e.deltaY < 0) scale += 0.1; else if (scale > 0.2) scale -= 0.1; 
     modalImg.style.transform = `scale(${scale})`;
 }, { passive: false });
 
@@ -687,14 +654,10 @@ const confirmTitleBtn = document.getElementById("confirm-title-btn");
 const cancelTitleBtn = document.getElementById("cancel-title-btn");
 
 extractTextBtn.addEventListener("click", () => {
-    titleInput.value = ""; 
-    titleModal.classList.remove("hidden");
-    titleInput.focus();
+    titleInput.value = ""; titleModal.classList.remove("hidden"); titleInput.focus();
 });
 
-cancelTitleBtn.addEventListener("click", () => {
-    titleModal.classList.add("hidden");
-});
+cancelTitleBtn.addEventListener("click", () => titleModal.classList.add("hidden"));
 
 confirmTitleBtn.addEventListener("click", async () => {
     const title = titleInput.value.trim() || "Extracted Whiteboard Note";
@@ -703,52 +666,42 @@ confirmTitleBtn.addEventListener("click", async () => {
     const apiKey = getApiKey();
     if (!apiKey) return; 
 
-    extractTextBtn.innerText = "Reading Image...";
-    extractTextBtn.disabled = true;
+    extractTextBtn.innerText = "Reading Image..."; extractTextBtn.disabled = true;
 
     try {
         const base64Data = currentActiveImageSrc.split(',')[1];
         const mimeType = currentActiveImageSrc.split(';')[0].split(':')[1] || "image/jpeg";
-
         const promptText = "Read all the handwritten or printed text in this image. Format it cleanly as text notes. If there are math equations, write them out clearly in plain text format so they can be read aloud by a text-to-speech engine.";
         
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: promptText },
-                        { inlineData: { mimeType: mimeType, data: base64Data } }
-                    ]
-                }]
-            })
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [ { text: promptText }, { inlineData: { mimeType: mimeType, data: base64Data } } ] }] })
         });
 
         const data = await response.json();
-        
         if (data.error) throw new Error(data.error.message);
 
         const extractedText = data.candidates[0].content.parts[0].text;
 
+        // Save AI output directly to Cloud!
+        const { data: dbData } = await supabase.from('notes').insert([{
+            user_id: currentUser.id, subject_name: currentClass, note_type: 'text', title: title, content: extractedText.trim()
+        }]).select();
+
         if (!textNotes[currentClass]) textNotes[currentClass] = [];
-        textNotes[currentClass].push({ title: title, content: extractedText.trim() });
-        localStorage.setItem("textNotes", JSON.stringify(textNotes));
+        if (dbData) textNotes[currentClass].push({ id: dbData[0].id, title: title, content: extractedText.trim() });
         
         loadTextNotes();
-        extractTextBtn.innerText = "Saved to Text Notes!";
+        extractTextBtn.innerText = "Saved to Cloud!";
         
         setTimeout(() => { 
-            modal.style.display = "none"; 
-            extractTextBtn.innerText = "Extract Text"; 
-            extractTextBtn.disabled = false;
+            modal.style.display = "none"; extractTextBtn.innerText = "Extract Text"; extractTextBtn.disabled = false;
         }, 1500);
 
     } catch (error) {
         console.error("Vision API Error Details:", error);
         alert(`Extraction failed! Error: ${error.message}`);
-        extractTextBtn.innerText = "Extract Text";
-        extractTextBtn.disabled = false;
+        extractTextBtn.innerText = "Extract Text"; extractTextBtn.disabled = false;
     }
 });
 
@@ -765,14 +718,11 @@ async function generateTutorScript(rawNotes) {
     
     try {
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
         const data = await response.json();
-        
         if (data.error) throw new Error(data.error.message);
-        
         return data.candidates[0].content.parts[0].text;
     } catch (error) { 
         console.error("Tutor API Error:", error);
@@ -785,20 +735,15 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
     reelContainer.classList.remove('hidden');
     
     if (!textNotes[currentClass] || textNotes[currentClass].length === 0) { 
-        reelTextOverlay.innerText = "NO NOTES TO READ"; 
-        return; 
+        reelTextOverlay.innerText = "NO NOTES TO READ"; return; 
     }
 
     let notesToRead = textNotes[currentClass];
-    
     if (isNoteSelectMode && selectedNoteIndices.size > 0) {
         notesToRead = Array.from(selectedNoteIndices).map(index => textNotes[currentClass][index]);
     }
 
-    const rawScriptText = notesToRead.map(n => {
-        return (typeof n === 'object' && n !== null) ? `${n.title}: ${n.content}` : n;
-    }).join("\n\n");
-
+    const rawScriptText = notesToRead.map(n => `${n.title}: ${n.content}`).join("\n\n");
     reelTextOverlay.innerText = "LOADING REEL...";
 
     try {
