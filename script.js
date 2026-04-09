@@ -730,8 +730,10 @@ async function generateTutorScript(rawNotes) {
     }
 }
 
+window.speechSynthesis.getVoices();
+
 document.getElementById('start-reel-btn').addEventListener('click', async () => {
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance('')); 
+    window.speechSynthesis.cancel(); 
     reelContainer.classList.remove('hidden');
     
     if (!textNotes[currentClass] || textNotes[currentClass].length === 0) { 
@@ -744,14 +746,21 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
     }
 
     const rawScriptText = notesToRead.map(n => `${n.title}: ${n.content}`).join("\n\n");
-    reelTextOverlay.innerText = "LOADING REEL...";
+    
+    reelTextOverlay.innerText = "Loading Reel...\n(This takes a few seconds)";
 
     try {
         const aiScript = await generateTutorScript(rawScriptText);
         const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
-        speechInstance.rate = 1.3; 
+        speechInstance.rate = 1.2;
+        
+        // --- THE MOBILE FIX: Force the phone to use a local voice ---
+        const voices = window.speechSynthesis.getVoices();
+        const localVoice = voices.find(v => v.localService === true && v.lang.startsWith('en'));
+        if (localVoice) speechInstance.voice = localVoice;
+        // -----------------------------------------------------------
         
         speechInstance.onboundary = (event) => {
             if (event.name === 'word') {
