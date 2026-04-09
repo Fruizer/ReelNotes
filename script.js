@@ -1,3 +1,29 @@
+// --- 1. SUPABASE CONFIG ---
+var SUPABASE_URL = 'https://igghnjkzpvaktxxdhzqm.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZ2huamt6cHZha3R4eGRoenFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MDg4NjksImV4cCI6MjA5MTI4NDg2OX0.g1J5J5Sg5-11myOxSji8UP5xJqK2oY8tpT87mChaKhw'; 
+var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// --- AUTHENTICATION LOGIC ---
+var authContainer = document.getElementById("auth-container");
+var authEmailInput = document.getElementById("auth-email");
+var authPasswordInput = document.getElementById("auth-password");
+var authUsernameInput = document.getElementById("auth-username");
+var authSubmitBtn = document.getElementById("auth-submit-btn");
+var authToggleBtn = document.getElementById("auth-toggle-btn");
+var authError = document.getElementById("auth-error");
+var authTitle = document.getElementById("auth-title");
+var authSubtitle = document.getElementById("auth-subtitle");
+
+var topNavbar = document.getElementById("top-navbar");
+var userProfileBtn = document.getElementById("user-profile-btn");
+var userDropdown = document.getElementById("user-dropdown");
+var navUsername = document.getElementById("nav-username");
+var dropdownName = document.getElementById("dropdown-name");
+var dropdownEmail = document.getElementById("dropdown-email");
+var logoutBtn = document.getElementById("logout-btn");
+var emailConfirmModal = document.getElementById("email-confirm-modal");
+var closeEmailModal = document.getElementById("close-email-modal");
+
 // --- INITIALIZATION & DATA MIGRATION ---
 const mainMenu = document.getElementById("main-menu");
 const workspaceContainer = document.getElementById("workspace-container");
@@ -11,6 +37,143 @@ const noteSearchInput = document.getElementById("note-search");
 const textNoteTitleInput = document.getElementById("text-note-title");
 const textNotesList = document.getElementById("text-notes-list");
 const textNoteInput = document.getElementById("text-note-input");
+
+let currentUser = null;
+let isSignUpMode = false; // Tracks which screen we are on
+
+function showAuthError(msg) {
+    authError.style.display = "block";
+    authError.innerText = msg;
+}
+
+// TOGGLE BETWEEN LOGIN AND SIGN UP
+authToggleBtn.addEventListener("click", () => {
+    isSignUpMode = !isSignUpMode;
+    authError.style.display = "none";
+    authEmailInput.value = "";
+    authPasswordInput.value = "";
+    
+    if (isSignUpMode) {
+        authTitle.innerText = "Create Account";
+        authSubtitle.innerText = "Enter your details to get started.";
+        authUsernameInput.classList.remove("hidden");
+        authSubmitBtn.innerText = "Sign Up";
+        authToggleBtn.innerText = "Already have an account? Log In";
+    } else {
+        authTitle.innerText = "ReelNotes";
+        authSubtitle.innerText = "Sign in to sync your notes to the cloud.";
+        authUsernameInput.classList.add("hidden");
+        authSubmitBtn.innerText = "Log In";
+        authToggleBtn.innerText = "Need an account? Sign Up";
+    }
+});
+
+// MAIN SUBMIT BUTTON (Handles BOTH Login and Signup!)
+authSubmitBtn.addEventListener("click", async () => {
+    const email = authEmailInput.value.trim();
+    const password = authPasswordInput.value;
+    const username = authUsernameInput.value.trim();
+    
+    if (!email || !password) return showAuthError("Bro, fill in your email and password!");
+    if (isSignUpMode && !username) return showAuthError("Don't forget your username!");
+    
+    authSubmitBtn.innerText = "Processing...";
+    authError.style.display = "none";
+
+    if (isSignUpMode) {
+        // --- SIGN UP LOGIC ---
+        const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: { display_name: username }
+            }
+        });
+
+        authSubmitBtn.innerText = "Sign Up";
+
+        if (error) {
+            showAuthError(error.message);
+        } else {
+            emailConfirmModal.classList.remove("hidden");
+            authToggleBtn.click();
+        }
+
+    } else {
+        // --- LOG IN LOGIC ---
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        authSubmitBtn.innerText = "Log In";
+
+        if (error) {
+            showAuthError(error.message);
+        } else {
+            checkSession(); // refresh session to load dashboard
+        }
+    }
+});
+
+// Profile Dropdown Toggle Logic
+userProfileBtn.addEventListener("click", () => {
+    userDropdown.classList.toggle("hidden");
+});
+
+// Close dropdown if clicked anywhere else
+window.addEventListener("click", (e) => {
+    if (!userProfileBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+        userDropdown.classList.add("hidden");
+    }
+});
+
+// Logout Logic
+logoutBtn.addEventListener("click", async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+        checkSession(); // This will auto-hide the dashboard and show the login screen
+        userDropdown.classList.add("hidden"); // Close the dropdown
+    }
+});
+
+// Close Email Modal Logic
+closeEmailModal.addEventListener("click", () => {
+    emailConfirmModal.classList.add("hidden");
+});
+
+// Check if user is already logged in
+async function checkSession() {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+        currentUser = session.user;
+        authContainer.classList.add("hidden");
+        mainMenu.classList.remove("hidden");
+        topNavbar.classList.remove("hidden"); // Unhide the top navbar
+        
+        // Grab the saved username from Supabase metadata (or fallback to email)
+        const savedName = currentUser.user_metadata?.display_name || currentUser.email.split('@')[0];
+        
+        // Update Dashboard Welcome text
+        const welcomeSpan = document.getElementById('welcome-username');
+        if (welcomeSpan) welcomeSpan.innerText = savedName;
+
+        // Update Top Nav & Dropdown UI with their real data
+        if (navUsername) navUsername.innerText = savedName;
+        if (dropdownName) dropdownName.innerText = savedName;
+        if (dropdownEmail) dropdownEmail.innerText = currentUser.email;
+        
+    } else {
+        currentUser = null;
+        authContainer.classList.remove("hidden");
+        mainMenu.classList.add("hidden");
+        topNavbar.classList.add("hidden"); // Hide the top navbar again
+    }
+}
+
+// Run this immediately when the page loads
+checkSession();
 
 // Data fallback
 let subjects = JSON.parse(localStorage.getItem("subjects")) || JSON.parse(localStorage.getItem("classes")) || [];
@@ -393,7 +556,6 @@ document.getElementById("sort-text-notes").addEventListener("click", () => {
     }
 });
 
-
 // --- PICTURE NOTES LOGIC ---
 const pictureNotesList = document.getElementById("picture-notes-list");
 const imageInput = document.getElementById("image-input");
@@ -667,10 +829,6 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
     }
 });
 
-document.getElementById('close-reel-btn').addEventListener('click', () => {
-    reelContainer.classList.add('hidden');
-    window.speechSynthesis.cancel();
-});
 document.getElementById('close-reel-btn').addEventListener('click', () => {
     reelContainer.classList.add('hidden');
     window.speechSynthesis.cancel();
