@@ -1,3 +1,7 @@
+html {
+    scroll-behavior: smooth;
+}
+
 /* --- UI BASE--- */
 body {
     background-color: #0F172A; /* Deep Navy */
@@ -208,7 +212,6 @@ button.subject-btn.selected-for-delete::after {
 }
 
 /* Note Lists */
-.dark-list { list-style: none; padding: 0; }
 .dark-list li {
     background: #1E293B;
     padding: 15px;
@@ -216,7 +219,15 @@ button.subject-btn.selected-for-delete::after {
     margin-bottom: 10px;
     border: 1px solid #334155;
     cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* Added transition */
 }
+
+.dark-list li:hover { 
+    border-color: #38BDF8; 
+    transform: translateY(-3px); /* Gentle lift up */
+    box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+}
+
 .dark-list li:hover { border-color: #38BDF8; }
 .dark-list li.selected { border-color: #38BDF8; background: #0F172A; }
 
@@ -233,10 +244,17 @@ button.subject-btn.selected-for-delete::after {
     display: flex; justify-content: center; align-items: center;
     z-index: 100;
 }
+
 .dark-modal-box {
-    background-color: #1E293B; padding: 30px; border-radius: 16px;
-    width: 90%; max-width: 400px;
-    border: 1px solid #334155; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    background: rgba(30, 41, 59, 0.7); /* Translucent base */
+    backdrop-filter: blur(16px); /* The Glass effect */
+    -webkit-backdrop-filter: blur(16px);
+    padding: 30px; 
+    border-radius: 16px;
+    width: 90%; 
+    max-width: 400px;
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.1);
 }
 .dark-modal-box h2 { margin-top: 0; }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
@@ -455,4 +473,38 @@ button.subject-btn.selected-for-delete::after {
 
 .note-title-text {
     flex-grow: 1;
+}
+
+/* --- VISUAL FLAIR UPGRADES  --- */
+
+/* The Entrance Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.staggered-load {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Smooth Dropdown Animation */
+#user-dropdown {
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform-origin: top right;
+    opacity: 0;
+    transform: scale(0.95);
+    visibility: hidden;
+    display: block !important; /* Overrides the .hidden class */
+}
+
+#user-dropdown.active {
+    opacity: 1;
+    transform: scale(1);
+    visibility: visible;
 }

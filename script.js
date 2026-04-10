@@ -117,14 +117,15 @@ authSubmitBtn.addEventListener("click", async () => {
 });
 
 // Profile Dropdown Toggle Logic
-userProfileBtn.addEventListener("click", () => {
-    userDropdown.classList.toggle("hidden");
+userProfileBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle("active");
 });
 
 // Close dropdown if clicked anywhere else
 window.addEventListener("click", (e) => {
-    if (!userProfileBtn.contains(e.target) && !userDropdown.contains(e.target)) {
-        userDropdown.classList.add("hidden");
+    if (!userDropdown.contains(e.target)) {
+        userDropdown.classList.remove("active");
     }
 });
 
@@ -133,7 +134,7 @@ logoutBtn.addEventListener("click", async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) {
         checkSession(); // This will auto-hide the dashboard and show the login screen
-        userDropdown.classList.add("hidden"); // Close the dropdown
+        userDropdown.classList.remove("active");
     }
 });
 
@@ -152,8 +153,9 @@ async function checkSession() {
         mainMenu.classList.remove("hidden");
         topNavbar.classList.remove("hidden"); // Unhide the top navbar
         
-        // Grab the saved username from Supabase metadata (or fallback to email)
-        const savedName = currentUser.user_metadata?.display_name || currentUser.email.split('@')[0];
+        const savedName = currentUser.user_metadata?.display_name || 
+                  currentUser.user_metadata?.full_name || 
+                  currentUser.email.split('@')[0];
         
         // Update Dashboard Welcome text
         const welcomeSpan = document.getElementById('welcome-username');
