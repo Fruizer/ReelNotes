@@ -40,7 +40,6 @@ const textNoteInput = document.getElementById("text-note-input");
 
 let currentUser = null;
 let isSignUpMode = false; // Tracks which screen we are on
-let isGenerating = false;
 
 function showAuthError(msg) {
     authError.style.display = "block";
@@ -714,32 +713,28 @@ const reelTextOverlay = document.getElementById('reel-text-overlay');
 let speechInstance = null;
 
 async function generateTutorScript(rawNotes) {
+    const apiKey = getApiKey();
+    if (!apiKey) return "Error generating script. No API Key.";
+
+    const prompt = `You are a fun, energetic tutor making a short-form video. Take the following class notes and rewrite them into a punchy, easy-to-understand tutor script. Explain the concepts simply yet infoirmative like you're talking to a friend. Do NOT use emojis, asterisks, hashtags, or formatting. Just output the plain text script for a text-to-speech engine. Here are the notes: ${rawNotes}`;
+    
     try {
-        const response = await fetch('/api/generate-reel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rawNotes })
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
-        
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || "Server error");
-        }
-
-        return data.script;
-
+        if (data.error) throw new Error(data.error.message);
+        return data.candidates[0].content.parts[0].text;
     } catch (error) { 
         console.error("Tutor API Error:", error);
-        return null; 
+        return "Error generating script. Check console."; 
     }
 }
 
 window.speechSynthesis.getVoices();
 
 document.getElementById('start-reel-btn').addEventListener('click', async () => {
-    if (isGenerating) return;
-    isGenerating = true;
     window.speechSynthesis.cancel(); 
     reelContainer.classList.remove('hidden');
     
@@ -758,12 +753,7 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
 
     try {
         const aiScript = await generateTutorScript(rawScriptText);
-
-        if (!aiScript) {
-            reelTextOverlay.innerText = "AI is busy right now. Try again.";
-            return;
-        }
-        const cleanScript = aiScript.replace(/+/g, ' ').trim();
+        const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
         speechInstance.rate = 1.2;
@@ -793,9 +783,6 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
         console.error("Reel Generation Error:", error);
         reelTextOverlay.innerText = "ERROR GENERATING SCRIPT";
     }
-    finally {
-    isGenerating = false;
-}
 });
 
 document.getElementById('close-reel-btn').addEventListener('click', () => {
