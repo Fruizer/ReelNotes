@@ -731,7 +731,7 @@ async function generateTutorScript(rawNotes) {
 
     } catch (error) { 
         console.error("Tutor API Error:", error);
-        return null; // IMPORTANT CHANGE
+        return null; 
     }
 }
 
@@ -763,6 +763,7 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
             reelTextOverlay.innerText = "AI is busy right now. Try again.";
             return;
         }
+        const cleanScript = aiScript.replace(/+/g, ' ').trim();
 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
         speechInstance.rate = 1.2;
