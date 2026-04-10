@@ -40,6 +40,7 @@ const textNoteInput = document.getElementById("text-note-input");
 
 let currentUser = null;
 let isSignUpMode = false; // Tracks which screen we are on
+let isGenerating = false;
 
 function showAuthError(msg) {
     authError.style.display = "block";
@@ -717,22 +718,28 @@ async function generateTutorScript(rawNotes) {
         const response = await fetch('/api/generate-reel', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rawNotes: rawNotes })
+            body: JSON.stringify({ rawNotes })
         });
         
         const data = await response.json();
-        if (data.error) throw new Error(data.error);
-        
+
+        if (!response.ok) {
+            throw new Error(data.error || "Server error");
+        }
+
         return data.script;
+
     } catch (error) { 
         console.error("Tutor API Error:", error);
-        return "Error generating script. Check console."; 
+        return null; // IMPORTANT CHANGE
     }
 }
 
 window.speechSynthesis.getVoices();
 
 document.getElementById('start-reel-btn').addEventListener('click', async () => {
+    if (isGenerating) return;
+    isGenerating = true;
     window.speechSynthesis.cancel(); 
     reelContainer.classList.remove('hidden');
     
@@ -751,7 +758,11 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
 
     try {
         const aiScript = await generateTutorScript(rawScriptText);
-        const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
+
+        if (!aiScript) {
+            reelTextOverlay.innerText = "AI is busy right now. Try again.";
+            return;
+        }
 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
         speechInstance.rate = 1.2;
@@ -781,6 +792,9 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
         console.error("Reel Generation Error:", error);
         reelTextOverlay.innerText = "ERROR GENERATING SCRIPT";
     }
+    finally {
+    isGenerating = false;
+}
 });
 
 document.getElementById('close-reel-btn').addEventListener('click', () => {
