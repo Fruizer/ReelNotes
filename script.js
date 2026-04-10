@@ -713,19 +713,17 @@ const reelTextOverlay = document.getElementById('reel-text-overlay');
 let speechInstance = null;
 
 async function generateTutorScript(rawNotes) {
-    const apiKey = getApiKey();
-    if (!apiKey) return "Error generating script. No API Key.";
-
-    const prompt = `You are a fun, energetic tutor making a short-form video. Take the following class notes and rewrite them into a punchy, easy-to-understand tutor script. Explain the concepts simply yet infoirmative like you're talking to a friend. Do NOT use emojis, asterisks, hashtags, or formatting. Just output the plain text script for a text-to-speech engine. Here are the notes: ${rawNotes}`;
-    
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        const response = await fetch('/api/generate-reel', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rawNotes: rawNotes })
         });
+        
         const data = await response.json();
-        if (data.error) throw new Error(data.error.message);
-        return data.candidates[0].content.parts[0].text;
+        if (data.error) throw new Error(data.error);
+        
+        return data.script;
     } catch (error) { 
         console.error("Tutor API Error:", error);
         return "Error generating script. Check console."; 
