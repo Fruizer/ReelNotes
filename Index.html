@@ -6,10 +6,10 @@
     <title>ReelNotes</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 
    <body>
-    <!-- === LOGIN / AUTH SCREEN === -->
     <div class="container dark-container" id="auth-container" style="max-width: 400px; margin: 100px auto; text-align: center;">
         <div class="dark-modal-box" style="width: 100%; padding: 40px;">
             <div class="card-icon" style="display: inline-flex; margin-bottom: 20px;">
@@ -22,7 +22,6 @@
             <h1 class="glow-text" id="auth-title" style="font-size: 2rem; margin-bottom: 5px;">ReelNotes</h1>
             <p class="subtitle" id="auth-subtitle" style="margin-bottom: 30px;">Sign in to sync your notes to the cloud.</p>
             
-            <!-- NEW: Hidden Username Input -->
             <input type="text" id="auth-username" class="dark-input full-width hidden" placeholder="Your Name (e.g., Lorenzo)" style="margin-bottom: 15px;">
             
             <input type="email" id="auth-email" class="dark-input full-width" placeholder="Email address" style="margin-bottom: 15px;">
@@ -35,18 +34,15 @@
         </div>
     </div>
 
-    <!-- === GLOBAL TOP NAVIGATION === -->
     <header id="top-navbar" class="hidden" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; border-bottom: 1px solid #334155; background: #0F172A;">
         <h2 class="glow-text" style="margin: 0; font-size: 1.5rem;">ReelNotes</h2>
         
         <div style="position: relative;">
-            <!-- Profile Button -->
             <div id="user-profile-btn" style="cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 5px 10px; border-radius: 8px; transition: background 0.2s;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 <span id="nav-username" style="color: #F8FAFC; font-weight: bold;">Username</span>
             </div>
 
-            <!-- The Dropdown Menu -->
             <div id="user-dropdown" style="position: absolute; top: 45px; right: 0; background: #1E293B; border: 1px solid #334155; border-radius: 8px; width: 220px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 100; overflow: hidden;">
                 <div style="padding: 15px; border-bottom: 1px solid #334155; background: #0F172A;">
                     <p id="dropdown-name" style="margin: 0; font-weight: bold; color: #F8FAFC; font-size: 0.95rem;">Loading...</p>
@@ -85,8 +81,6 @@
         <div id="class-buttons" class="bento-grid"></div>
     </div>
 
-    <!-- === MODALS === -->
-    <!-- Add Subject Modal -->
     <div id="custom-add-modal" class="dark-overlay hidden">
         <div class="dark-modal-box">
             <h2 style="color: #F8FAFC; margin-top: 0;">Add New Subject</h2>
@@ -98,7 +92,6 @@
         </div>
     </div>
 
-    <!-- Custom Confirmation Modal -->
     <div id="custom-confirm-modal" class="dark-overlay hidden">
         <div class="dark-modal-box">
             <h2 style="margin-top: 0; color: #F8FAFC;">Are you sure?</h2>
@@ -110,7 +103,6 @@
         </div>
     </div>
 
-    <!-- Custom Extract Title Modal -->
     <div id="custom-title-modal" class="dark-overlay hidden" style="z-index: 10000;">
         <div class="dark-modal-box">
             <h2 style="margin-top: 0; color: #F8FAFC;">Name Your Notes</h2>
@@ -123,7 +115,6 @@
         </div>
     </div>
 
-    <!-- Custom Email Confirmation Modal -->
     <div id="email-confirm-modal" class="dark-overlay hidden" style="z-index: 10000;">
         <div class="dark-modal-box" style="text-align: center; max-width: 400px; padding: 40px;">
             <div style="margin-bottom: 20px; display: flex; justify-content: center;">
@@ -137,16 +128,14 @@
         </div>
     </div>
 
-    <!-- === THE WORKSPACE === -->
     <div class="container dark-container hidden" id="workspace-container" style="max-width: 100%; width: 100%; padding: 0; display: flex; height: 85vh; border-radius: 16px; overflow: hidden; border: 1px solid #334155;">
         
-        <!-- SIDEBAR -->
         <div class="workspace-sidebar" style="width: 260px; background: #0F172A; border-right: 1px solid #334155; display: flex; flex-direction: column; padding: 25px;">
             <h2 id="workspace-title" class="glow-text" style="font-size: 1.5rem; margin-top: 0; margin-bottom: 30px; word-wrap: break-word;">Subject</h2>
             
             <div class="sidebar-nav" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
                 <button class="nav-item active" id="nav-text-notes">Text Notes</button>
-                <button class="nav-item" id="nav-picture-notes">Picture Notes</button>
+                <button class="nav-item" id="nav-doc-notes">Document Notes</button> <button class="nav-item" id="nav-picture-notes">Picture Notes</button>
             </div>
 
             <div class="sidebar-footer" style="margin-top: auto; display: flex; flex-direction: column; gap: 15px;">
@@ -155,10 +144,8 @@
             </div>
         </div>
 
-        <!-- MAIN CONTENT AREA -->
         <div class="workspace-content" style="flex: 1; background: #1E293B; padding: 40px; overflow-y: auto;">
             
-            <!-- TEXT NOTES VIEW -->
             <div id="view-text-notes" class="content-view">
                 <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Text Notes</h2>
                 
@@ -180,7 +167,19 @@
                 <ul id="text-notes-list" class="dark-list" style="margin-top: 20px;"></ul>
             </div>
 
-            <!-- PICTURE NOTES VIEW -->
+            <div id="view-doc-notes" class="content-view hidden">
+                <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Document Notes</h2>
+                <p style="color: #94A3B8; margin-bottom: 15px;">Upload PDFs or Presentations. We'll extract the text so the AI Tutor can read it to you.</p>
+                
+                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                    <input type="file" id="doc-upload-input" accept="application/pdf" multiple class="dark-input" style="display: none;">
+                    <button id="trigger-doc-upload" class="btn-primary" style="padding: 15px 25px;">Upload PDFs (Max 5)</button>
+                    <span id="doc-upload-status" style="color: #38BDF8; font-size: 0.9rem; font-weight: bold;"></span>
+                </div>
+                
+                <ul id="doc-notes-list" class="dark-list"></ul>
+            </div>
+
             <div id="view-picture-notes" class="content-view hidden">
                 <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Picture Notes</h2>
                 <div style="display: flex; gap: 15px; align-items: center;">
@@ -193,8 +192,6 @@
         </div>
     </div>  
 
-    <!-- === FULLSCREEN OVERLAYS === -->
-    <!-- PHOTO ZOOM & EXTRACT MODAL -->
     <div id="photo-modal" class="modal">
         <span class="close">&times;</span>
         <img class="modal-content" id="modal-img">
@@ -217,6 +214,6 @@
    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
    
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=3"></script>
 </body>
 </html>

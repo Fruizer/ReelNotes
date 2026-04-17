@@ -3,6 +3,9 @@ var SUPABASE_URL = 'https://igghnjkzpvaktxxdhzqm.supabase.co';
 var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlnZ2huamt6cHZha3R4eGRoenFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3MDg4NjksImV4cCI6MjA5MTI4NDg2OX0.g1J5J5Sg5-11myOxSji8UP5xJqK2oY8tpT87mChaKhw'; 
 var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Tell pdf.js where its worker file is
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
 // --- AUTHENTICATION LOGIC ---
 var authContainer = document.getElementById("auth-container");
 var authEmailInput = document.getElementById("auth-email");
@@ -27,10 +30,15 @@ var closeEmailModal = document.getElementById("close-email-modal");
 // --- INITIALIZATION & DATA MIGRATION ---
 const mainMenu = document.getElementById("main-menu");
 const workspaceContainer = document.getElementById("workspace-container");
+
 const viewTextNotes = document.getElementById("view-text-notes");
+const viewDocNotes = document.getElementById("view-doc-notes");
 const viewPictureNotes = document.getElementById("view-picture-notes");
+
 const navTextNotes = document.getElementById("nav-text-notes");
+const navDocNotes = document.getElementById("nav-doc-notes");
 const navPictureNotes = document.getElementById("nav-picture-notes");
+
 const classButtonsDiv = document.getElementById("class-buttons");
 const classSearchInput = document.getElementById("class-search");
 const noteSearchInput = document.getElementById("note-search");
@@ -39,8 +47,7 @@ const textNotesList = document.getElementById("text-notes-list");
 const textNoteInput = document.getElementById("text-note-input");
 
 let currentUser = null;
-let isSignUpMode = false; // Tracks which screen we are on
-let isGenerating = false;
+let isSignUpMode = false;
 
 function showAuthError(msg) {
     authError.style.display = "block";
@@ -69,7 +76,6 @@ authToggleBtn.addEventListener("click", () => {
     }
 });
 
-// MAIN SUBMIT BUTTON (Handles BOTH Login and Signup!)
 authSubmitBtn.addEventListener("click", async () => {
     const email = authEmailInput.value.trim();
     const password = authPasswordInput.value;
@@ -82,69 +88,39 @@ authSubmitBtn.addEventListener("click", async () => {
     authError.style.display = "none";
 
     if (isSignUpMode) {
-        // --- SIGN UP LOGIC ---
         const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: { display_name: username }
-            }
+            email: email, password: password, options: { data: { display_name: username } }
         });
-
         authSubmitBtn.innerText = "Sign Up";
-
-        if (error) {
-            showAuthError(error.message);
-        } else {
-            emailConfirmModal.classList.remove("hidden");
-            authToggleBtn.click();
-        }
-
+        if (error) showAuthError(error.message);
+        else { emailConfirmModal.classList.remove("hidden"); authToggleBtn.click(); }
     } else {
-        // --- LOG IN LOGIC ---
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-
+        const { data, error } = await supabase.auth.signInWithPassword({ email: email, password: password });
         authSubmitBtn.innerText = "Log In";
-
-        if (error) {
-            showAuthError(error.message);
-        } else {
-            checkSession(); // refresh session to load dashboard
-        }
+        if (error) showAuthError(error.message);
+        else checkSession(); 
     }
 });
 
-// Profile Dropdown Toggle Logic
 userProfileBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     userDropdown.classList.toggle("active");
 });
 
-// Close dropdown if clicked anywhere else
 window.addEventListener("click", (e) => {
-    if (!userDropdown.contains(e.target)) {
-        userDropdown.classList.remove("active");
-    }
+    if (!userDropdown.contains(e.target)) userDropdown.classList.remove("active");
 });
 
-// Logout Logic
 logoutBtn.addEventListener("click", async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) {
-        checkSession(); // This will auto-hide the dashboard and show the login screen
+        checkSession(); 
         userDropdown.classList.remove("active");
     }
 });
 
-// Close Email Modal Logic
-closeEmailModal.addEventListener("click", () => {
-    emailConfirmModal.classList.add("hidden");
-});
+closeEmailModal.addEventListener("click", () => emailConfirmModal.classList.add("hidden"));
 
-// Check if user is already logged in
 async function checkSession() {
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -152,39 +128,34 @@ async function checkSession() {
         currentUser = session.user;
         authContainer.classList.add("hidden");
         mainMenu.classList.remove("hidden");
-        topNavbar.classList.remove("hidden"); // Unhide the top navbar
+        topNavbar.classList.remove("hidden"); 
         
-        const savedName = currentUser.user_metadata?.display_name || 
-                  currentUser.user_metadata?.full_name || 
-                  currentUser.email.split('@')[0];
+        const savedName = currentUser.user_metadata?.display_name || currentUser.user_metadata?.full_name || currentUser.email.split('@')[0];
         
-        // Update Dashboard Welcome text
         const welcomeSpan = document.getElementById('welcome-username');
         if (welcomeSpan) welcomeSpan.innerText = savedName;
 
-        // Update Top Nav & Dropdown UI with their real data
         if (navUsername) navUsername.innerText = savedName;
         if (dropdownName) dropdownName.innerText = savedName;
         if (dropdownEmail) dropdownEmail.innerText = currentUser.email;
         
-        // Download their subjects from the cloud
         fetchSubjectsFromCloud();
     } else {
         currentUser = null;
         authContainer.classList.remove("hidden");
         mainMenu.classList.add("hidden");
-        topNavbar.classList.add("hidden"); // Hide the top navbar again
+        topNavbar.classList.add("hidden"); 
     }
 }
 
-// Run this immediately when the page loads
 checkSession();
 
 // --- CLOUD DATA VARIABLES ---
-let subjects = []; // Fetched from cloud on login
-let textNotes = {}; // Fetched from cloud when opening a subject
-let pictureNotes = {}; // Fetched from cloud when opening a subject
-let pinnedSubjects = JSON.parse(localStorage.getItem("pinnedSubjects")) || []; // Pins stay local so your device remembers your layout
+let subjects = []; 
+let textNotes = {}; 
+let docNotes = {}; // NEW: Holds extracted PDF data
+let pictureNotes = {}; 
+let pinnedSubjects = JSON.parse(localStorage.getItem("pinnedSubjects")) || []; 
 let isNoteSelectMode = false;
 let selectedNoteIndices = new Set();
 let currentClass = "";
@@ -192,10 +163,7 @@ let selectedNoteIndex = null;
 let isEditMode = false;
 let subjectsToDelete = new Set();
 
-// Run immediately
-window.onload = () => {
-    updateSubjectDisplay();
-};
+window.onload = () => updateSubjectDisplay();
 
 // --- CLOUD DATABASE FETCHING ---
 async function fetchSubjectsFromCloud() {
@@ -208,6 +176,7 @@ async function fetchSubjectsFromCloud() {
 
 async function fetchNotesFromCloud(subjectName) {
     textNotes[subjectName] = [];
+    docNotes[subjectName] = [];
     pictureNotes[subjectName] = [];
     
     const { data, error } = await supabase
@@ -219,6 +188,8 @@ async function fetchNotesFromCloud(subjectName) {
         data.forEach(note => {
             if (note.note_type === 'text') {
                 textNotes[subjectName].push({ id: note.id, title: note.title, content: note.content });
+            } else if (note.note_type === 'document') {
+                docNotes[subjectName].push({ id: note.id, title: note.title, content: note.content });
             } else if (note.note_type === 'picture') {
                 pictureNotes[subjectName].push({ id: note.id, content: note.content });
             }
@@ -282,7 +253,6 @@ function updateSubjectDisplay() {
                     document.getElementById("workspace-title").innerText = "Loading notes...";
                     workspaceContainer.classList.remove("hidden");
                     
-                    // CLOUD FETCH: Get notes before showing!
                     await fetchNotesFromCloud(subjectName);
                     
                     document.getElementById("workspace-title").innerText = subjectName;
@@ -310,16 +280,11 @@ document.getElementById("cancel-add").addEventListener("click", () => addModal.c
 document.getElementById("confirm-add").addEventListener("click", async () => {
     const subjectName = newSubjectInput.value.trim();
     if (subjectName && !subjects.includes(subjectName)) {
-        
         document.getElementById("confirm-add").innerText = "Saving...";
-        
-        // Save Subject to Cloud!
         const { error } = await supabase.from('subjects').insert([{ name: subjectName, user_id: currentUser.id }]); 
-            
         document.getElementById("confirm-add").innerText = "Create";
-        if (error) {
-            alert("Error saving: " + error.message);
-        } else {
+        if (error) alert("Error saving: " + error.message);
+        else {
             subjects.push(subjectName);
             updateSubjectDisplay();
             addModal.classList.add("hidden");
@@ -329,7 +294,6 @@ document.getElementById("confirm-add").addEventListener("click", async () => {
     }
 });
 
-// --- CONFIRM MODAL LOGIC ---
 const confirmModal = document.getElementById("custom-confirm-modal");
 const confirmMessage = document.getElementById("confirm-modal-message");
 const acceptConfirmBtn = document.getElementById("accept-confirm-btn");
@@ -337,15 +301,12 @@ const cancelConfirmBtn = document.getElementById("cancel-confirm-btn");
 let confirmCallback = null;
 
 function showCustomConfirm(message, callback) {
-    confirmMessage.innerText = message;
-    confirmCallback = callback;
-    confirmModal.classList.remove("hidden");
+    confirmMessage.innerText = message; confirmCallback = callback; confirmModal.classList.remove("hidden");
 }
 
 cancelConfirmBtn.addEventListener("click", () => { confirmModal.classList.add("hidden"); confirmCallback = null; });
 acceptConfirmBtn.addEventListener("click", () => { confirmModal.classList.add("hidden"); if (confirmCallback) confirmCallback(); confirmCallback = null; });
 
-// --- EDIT MODE LOGIC ---
 const defaultActions = document.getElementById("default-actions");
 const editActions = document.getElementById("edit-actions");
 const deleteSelectedBtnDashboard = document.getElementById("delete-selected");
@@ -367,30 +328,32 @@ document.getElementById("cancel-edit-mode").addEventListener("click", toggleEdit
 document.getElementById("delete-selected").addEventListener("click", () => {
     if (subjectsToDelete.size === 0) return;
     showCustomConfirm(`Are you sure you want to delete ${subjectsToDelete.size} subject(s)? This will wipe all their notes.`, async () => {
-        
         const subsArray = Array.from(subjectsToDelete);
         deleteSelectedBtnDashboard.innerText = "Deleting...";
-
-        // Wipe from Cloud!
         await supabase.from('notes').delete().in('subject_name', subsArray);
         await supabase.from('subjects').delete().in('name', subsArray);
-        
         subjects = subjects.filter(s => !subjectsToDelete.has(s));
-        subsArray.forEach(sub => { delete textNotes[sub]; delete pictureNotes[sub]; });
-        
+        subsArray.forEach(sub => { delete textNotes[sub]; delete pictureNotes[sub]; delete docNotes[sub]; });
         toggleEditMode();
     });
 });
 
 // --- WORKSPACE NAVIGATION LOGIC ---
 function switchWorkspaceView(viewType) {
-    navTextNotes.classList.remove("active"); navPictureNotes.classList.remove("active");
-    viewTextNotes.classList.add("hidden"); viewPictureNotes.classList.add("hidden");
-    if (viewType === 'text') { navTextNotes.classList.add("active"); viewTextNotes.classList.remove("hidden"); loadTextNotes(); } 
-    else { navPictureNotes.classList.add("active"); viewPictureNotes.classList.remove("hidden"); loadPictureNotes(); }
+    navTextNotes.classList.remove("active"); navPictureNotes.classList.remove("active"); navDocNotes.classList.remove("active");
+    viewTextNotes.classList.add("hidden"); viewPictureNotes.classList.add("hidden"); viewDocNotes.classList.add("hidden");
+    
+    if (viewType === 'text') { 
+        navTextNotes.classList.add("active"); viewTextNotes.classList.remove("hidden"); loadTextNotes(); 
+    } else if (viewType === 'document') {
+        navDocNotes.classList.add("active"); viewDocNotes.classList.remove("hidden"); loadDocNotes();
+    } else { 
+        navPictureNotes.classList.add("active"); viewPictureNotes.classList.remove("hidden"); loadPictureNotes(); 
+    }
 }
 
 navTextNotes.addEventListener("click", () => switchWorkspaceView('text'));
+navDocNotes.addEventListener("click", () => switchWorkspaceView('document'));
 navPictureNotes.addEventListener("click", () => switchWorkspaceView('picture'));
 
 document.getElementById("back-to-dashboard").addEventListener("click", () => {
@@ -452,13 +415,11 @@ document.getElementById("save-text-note").addEventListener("click", async () => 
         btn.innerText = "Saving to Cloud...";
         
         if (selectedNoteIndex !== null) {
-            // Update Cloud Note
             const noteId = textNotes[currentClass][selectedNoteIndex].id;
             await supabase.from('notes').update({ title, content }).eq('id', noteId);
             textNotes[currentClass][selectedNoteIndex] = { id: noteId, title, content };
             selectedNoteIndex = null;
         } else {
-            // Insert New Cloud Note
             const { data } = await supabase.from('notes').insert([{ 
                 user_id: currentUser.id, subject_name: currentClass, note_type: 'text', title, content 
             }]).select();
@@ -521,11 +482,8 @@ deleteSelectedBtnNotes.addEventListener("click", () => {
     if (selectedNoteIndices.size > 0) {
         showCustomConfirm(`Delete ${selectedNoteIndices.size} selected note(s)?`, async () => {
             const indicesToDelete = Array.from(selectedNoteIndices).sort((a, b) => b - a);
-            
-            // Delete from Cloud via ID!
             const idsToDelete = indicesToDelete.map(index => textNotes[currentClass][index].id);
             await supabase.from('notes').delete().in('id', idsToDelete);
-            
             indicesToDelete.forEach(index => textNotes[currentClass].splice(index, 1));
             toggleSelectBtn.click(); 
         });
@@ -539,6 +497,110 @@ document.getElementById("sort-text-notes").addEventListener("click", () => {
     }
 });
 
+// --- NEW: DOCUMENT (PDF) UPLOAD LOGIC ---
+const docUploadInput = document.getElementById("doc-upload-input");
+const triggerDocUpload = document.getElementById("trigger-doc-upload");
+const docUploadStatus = document.getElementById("doc-upload-status");
+
+triggerDocUpload.addEventListener("click", () => docUploadInput.click());
+
+docUploadInput.addEventListener("change", async (e) => {
+    const files = e.target.files;
+    if (files.length === 0) return;
+    if (files.length > 5) {
+        alert("Maximum 5 files allowed per batch to prevent browser freezing.");
+        return;
+    }
+
+    triggerDocUpload.disabled = true;
+    triggerDocUpload.innerText = "Extracting...";
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        docUploadStatus.innerText = `Extracting: ${file.name} (${i+1}/${files.length})...`;
+        
+        try {
+            const extractedText = await extractTextFromPDF(file);
+            docUploadStatus.innerText = `Saving: ${file.name} to cloud...`;
+            
+            const { data, error } = await supabase.from('notes').insert([{
+                user_id: currentUser.id, subject_name: currentClass, note_type: 'document', title: file.name, content: extractedText
+            }]).select();
+
+            if (!error && data) {
+                if (!docNotes[currentClass]) docNotes[currentClass] = [];
+                docNotes[currentClass].push({ id: data[0].id, title: file.name, content: extractedText });
+            }
+        } catch (err) {
+            console.error(`Failed to extract ${file.name}:`, err);
+        }
+    }
+    
+    docUploadStatus.innerText = "All PDFs Extracted!";
+    setTimeout(() => docUploadStatus.innerText = "", 3000);
+    triggerDocUpload.disabled = false;
+    triggerDocUpload.innerText = "Upload PDFs (Max 5)";
+    docUploadInput.value = "";
+    loadDocNotes();
+});
+
+async function extractTextFromPDF(file) {
+    return new Promise((resolve, reject) => {
+        const fileReader = new FileReader();
+        fileReader.onload = async function() {
+            try {
+                const typedarray = new Uint8Array(this.result);
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let fullText = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const pageText = textContent.items.map(item => item.str).join(' ');
+                    fullText += pageText + "\n\n"; 
+                }
+                resolve(fullText);
+            } catch (err) {
+                reject(err);
+            }
+        };
+        fileReader.readAsArrayBuffer(file);
+    });
+}
+
+function loadDocNotes() {
+    const docList = document.getElementById("doc-notes-list");
+    docList.innerHTML = "";
+    if (docNotes[currentClass]) {
+        docNotes[currentClass].forEach((note, index) => {
+            const li = document.createElement("li");
+            const preview = note.content.length > 80 ? note.content.substring(0, 80) + "..." : note.content;
+            
+            li.innerHTML = `
+                <div class="note-header-bar">
+                    <span class="note-title-text" style="color: #38BDF8;">📄 ${note.title}</span>
+                    <button class="btn-ghost-danger delete-doc-btn" data-index="${index}" style="padding: 5px 10px; font-size: 0.8rem;">Delete</button>
+                </div>
+                <div class="note-preview" style="display: block;">${preview}</div>
+            `;
+            
+            // Add delete event listener explicitly to avoid HTML inline onclick issues
+            const deleteBtn = li.querySelector('.delete-doc-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showCustomConfirm(`Delete the extracted document "${note.title}"?`, async () => {
+                    const noteId = docNotes[currentClass][index].id;
+                    await supabase.from('notes').delete().eq('id', noteId);
+                    docNotes[currentClass].splice(index, 1);
+                    loadDocNotes();
+                });
+            });
+
+            docList.appendChild(li);
+        });
+    }
+}
+
+
 // --- PICTURE NOTES LOGIC ---
 const pictureNotesList = document.getElementById("picture-notes-list");
 const imageInput = document.getElementById("image-input");
@@ -549,7 +611,7 @@ function loadPictureNotes() {
         pictureNotes[currentClass].forEach((picObj, index) => {
             const li = document.createElement("li");
             const img = document.createElement("img");
-            img.src = picObj.content; // Render from Cloud object
+            img.src = picObj.content; 
             li.appendChild(img);
             
             const deleteBtn = document.createElement("button");
@@ -586,9 +648,8 @@ document.getElementById("save-image-note").addEventListener("click", () => {
             const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.7);
 
             const uploadBtn = document.getElementById("save-image-note");
-            uploadBtn.innerText = "Uploading to Cloud...";
+            uploadBtn.innerText = "Uploading...";
 
-            // Send Image string to Cloud!
             supabase.from('notes').insert([{
                 user_id: currentUser.id, subject_name: currentClass, note_type: 'picture', title: 'Picture Note', content: compressedDataUrl
             }]).select().then(({ data, error }) => {
@@ -610,7 +671,7 @@ document.getElementById("save-image-note").addEventListener("click", () => {
 function deletePictureNote(index) {
     showCustomConfirm("Delete this picture note?", async () => {
         const noteId = pictureNotes[currentClass][index].id;
-        await supabase.from('notes').delete().eq('id', noteId); // Wipe from Cloud
+        await supabase.from('notes').delete().eq('id', noteId); 
         pictureNotes[currentClass].splice(index, 1);
         loadPictureNotes();
     });
@@ -650,7 +711,6 @@ modalImg.addEventListener("wheel", (e) => {
     modalImg.style.transform = `scale(${scale})`;
 }, { passive: false });
 
-// --- CUSTOM TITLE MODAL & GEMINI VISION TEXT EXTRACTION ---
 const titleModal = document.getElementById("custom-title-modal");
 const titleInput = document.getElementById("extract-title-input");
 const confirmTitleBtn = document.getElementById("confirm-title-btn");
@@ -686,7 +746,6 @@ confirmTitleBtn.addEventListener("click", async () => {
 
         const extractedText = data.candidates[0].content.parts[0].text;
 
-        // Save AI output directly to Cloud!
         const { data: dbData } = await supabase.from('notes').insert([{
             user_id: currentUser.id, subject_name: currentClass, note_type: 'text', title: title, content: extractedText.trim()
         }]).select();
@@ -714,42 +773,47 @@ const reelTextOverlay = document.getElementById('reel-text-overlay');
 let speechInstance = null;
 
 async function generateTutorScript(rawNotes) {
+    const apiKey = getApiKey();
+    if (!apiKey) return "Error generating script. No API Key.";
+
+    const prompt = `You are a fun, energetic tutor making a short-form video. Take the following class notes and rewrite them into a punchy, easy-to-understand tutor script. Explain the concepts simply yet infoirmative like you're talking to a friend. Do NOT use emojis, asterisks, hashtags, or formatting. Just output the plain text script for a text-to-speech engine. Here are the notes: ${rawNotes}`;
+    
     try {
-        const response = await fetch('/api/generate-reel', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rawNotes })
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
-        
         const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || "Server error");
-        }
-
-        return data.script;
-
+        if (data.error) throw new Error(data.error.message);
+        return data.candidates[0].content.parts[0].text;
     } catch (error) { 
         console.error("Tutor API Error:", error);
-        return null; // IMPORTANT CHANGE
+        return "Error generating script. Check console."; 
     }
 }
 
 window.speechSynthesis.getVoices();
 
 document.getElementById('start-reel-btn').addEventListener('click', async () => {
-    if (isGenerating) return;
-    isGenerating = true;
     window.speechSynthesis.cancel(); 
     reelContainer.classList.remove('hidden');
     
-    if (!textNotes[currentClass] || textNotes[currentClass].length === 0) { 
-        reelTextOverlay.innerText = "NO NOTES TO READ"; return; 
+    let notesToRead = [];
+    
+    // Check which tab is currently active to decide what to read!
+    if (navTextNotes.classList.contains("active")) {
+        if (isNoteSelectMode && selectedNoteIndices.size > 0) {
+            notesToRead = Array.from(selectedNoteIndices).map(index => textNotes[currentClass][index]);
+        } else {
+            notesToRead = textNotes[currentClass] || [];
+        }
+    } else if (navDocNotes.classList.contains("active")) {
+        // If they are in the Document Notes tab, read the PDFs!
+        notesToRead = docNotes[currentClass] || [];
     }
 
-    let notesToRead = textNotes[currentClass];
-    if (isNoteSelectMode && selectedNoteIndices.size > 0) {
-        notesToRead = Array.from(selectedNoteIndices).map(index => textNotes[currentClass][index]);
+    if (notesToRead.length === 0) { 
+        reelTextOverlay.innerText = "NO NOTES IN THIS TAB"; return; 
     }
 
     const rawScriptText = notesToRead.map(n => `${n.title}: ${n.content}`).join("\n\n");
@@ -758,20 +822,14 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
 
     try {
         const aiScript = await generateTutorScript(rawScriptText);
-
-        if (!aiScript) {
-            reelTextOverlay.innerText = "AI is busy right now. Try again.";
-            return;
-        }
+        const cleanScript = aiScript.replace(/[\n\r]+/g, ' ').trim();
 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
         speechInstance.rate = 1.2;
         
-        // --- THE MOBILE FIX: Force the phone to use a local voice ---
         const voices = window.speechSynthesis.getVoices();
         const localVoice = voices.find(v => v.localService === true && v.lang.startsWith('en'));
         if (localVoice) speechInstance.voice = localVoice;
-        // -----------------------------------------------------------
         
         speechInstance.onboundary = (event) => {
             if (event.name === 'word') {
@@ -792,9 +850,6 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
         console.error("Reel Generation Error:", error);
         reelTextOverlay.innerText = "ERROR GENERATING SCRIPT";
     }
-    finally {
-    isGenerating = false;
-}
 });
 
 document.getElementById('close-reel-btn').addEventListener('click', () => {
