@@ -54,7 +54,6 @@ function showAuthError(msg) {
     authError.innerText = msg;
 }
 
-// TOGGLE BETWEEN LOGIN AND SIGN UP
 authToggleBtn.addEventListener("click", () => {
     isSignUpMode = !isSignUpMode;
     authError.style.display = "none";
@@ -153,7 +152,7 @@ checkSession();
 // --- CLOUD DATA VARIABLES ---
 let subjects = []; 
 let textNotes = {}; 
-let docNotes = {}; // NEW: Holds extracted PDF data
+let docNotes = {}; 
 let pictureNotes = {}; 
 let pinnedSubjects = JSON.parse(localStorage.getItem("pinnedSubjects")) || []; 
 let isNoteSelectMode = false;
@@ -165,7 +164,6 @@ let subjectsToDelete = new Set();
 
 window.onload = () => updateSubjectDisplay();
 
-// --- CLOUD DATABASE FETCHING ---
 async function fetchSubjectsFromCloud() {
     const { data, error } = await supabase.from('subjects').select('name');
     if (!error && data) {
@@ -438,7 +436,7 @@ document.getElementById("save-text-note").addEventListener("click", async () => 
 
 noteSearchInput.addEventListener("input", loadTextNotes);
 
-// --- SMART SELECTION ACTION LOGIC ---
+// --- SMART SELECTION ACTION LOGIC (TEXT NOTES) ---
 const startReelBtn = document.getElementById("start-reel-btn");
 const dynamicActionBar = document.getElementById("dynamic-action-bar");
 const editSelectedBtn = document.getElementById("edit-selected-note");
@@ -497,10 +495,24 @@ document.getElementById("sort-text-notes").addEventListener("click", () => {
     }
 });
 
-// --- NEW: DOCUMENT (PDF) UPLOAD LOGIC ---
+// --- DOCUMENT (PDF) UPLOAD & RENDER LOGIC ---
 const docUploadInput = document.getElementById("doc-upload-input");
 const triggerDocUpload = document.getElementById("trigger-doc-upload");
 const docUploadStatus = document.getElementById("doc-upload-status");
+const docNotesGrid = document.getElementById("doc-notes-grid");
+
+// Selection Variables for Docs
+let isDocSelectMode = false;
+let selectedDocIndices = new Set();
+const toggleSelectDocsBtn = document.getElementById("toggle-select-docs");
+const dynamicDocActionBar = document.getElementById("dynamic-doc-action-bar");
+const deleteSelectedDocsBtn = document.getElementById("delete-selected-docs");
+
+// Reader Modal Variables
+const docReaderModal = document.getElementById("doc-reader-modal");
+const readerTitle = document.getElementById("reader-title");
+const readerContent = document.getElementById("reader-content");
+const closeReaderBtn = document.getElementById("close-reader-btn");
 
 triggerDocUpload.addEventListener("click", () => docUploadInput.click());
 
@@ -568,38 +580,125 @@ async function extractTextFromPDF(file) {
 }
 
 function loadDocNotes() {
-    const docList = document.getElementById("doc-notes-list");
-    docList.innerHTML = "";
+    docNotesGrid.innerHTML = "";
+
     if (docNotes[currentClass]) {
         docNotes[currentClass].forEach((note, index) => {
-            const li = document.createElement("li");
-            const preview = note.content.length > 80 ? note.content.substring(0, 80) + "..." : note.content;
+            const card = document.createElement("div");
             
-            li.innerHTML = `
-                <div class="note-header-bar">
-                    <span class="note-title-text" style="color: #38BDF8;">📄 ${note.title}</span>
-                    <button class="btn-ghost-danger delete-doc-btn" data-index="${index}" style="padding: 5px 10px; font-size: 0.8rem;">Delete</button>
+            // Inline styling to match the landscape grid UI
+            card.style.background = "#1E293B";
+            card.style.border = selectedDocIndices.has(index) ? "1px solid #38BDF8" : "1px solid #334155";
+            card.style.borderRadius = "8px";
+            card.style.padding = "15px 20px";
+            card.style.cursor = "pointer";
+            card.style.transition = "all 0.2s ease";
+            if (selectedDocIndices.has(index)) card.style.backgroundColor = "rgba(56, 189, 248, 0.05)";
+            
+            const isChecked = selectedDocIndices.has(index) ? "checked" : "";
+            const preview = note.content.length > 100 ? note.content.substring(0, 100) + "..." : note.content;
+            
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #334155; padding-bottom: 12px; margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="checkbox" class="note-checkbox doc-checkbox" data-index="${index}" ${isChecked} style="${isDocSelectMode ? 'display:inline-block;' : 'display:none;'}">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span style="font-weight: 700; color: #38BDF8; font-size: 1.05rem;">${note.title}</span>
+                    </div>
+                    ${!isDocSelectMode ? `<button class="btn-ghost-danger delete-doc-btn" data-index="${index}" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 20px;">Delete</button>` : ''}
                 </div>
-                <div class="note-preview" style="display: block;">${preview}</div>
+                <div style="font-size: 0.85rem; color: #64748B; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${preview}
+                </div>
             `;
             
-            // Add delete event listener explicitly to avoid HTML inline onclick issues
-            const deleteBtn = li.querySelector('.delete-doc-btn');
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showCustomConfirm(`Delete the extracted document "${note.title}"?`, async () => {
-                    const noteId = docNotes[currentClass][index].id;
-                    await supabase.from('notes').delete().eq('id', noteId);
-                    docNotes[currentClass].splice(index, 1);
-                    loadDocNotes();
-                });
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-doc-btn')) return;
+
+                if (isDocSelectMode) {
+                    const checkbox = card.querySelector('.doc-checkbox');
+                    if (e.target !== checkbox) checkbox.checked = !checkbox.checked; 
+                    
+                    if (checkbox.checked) {
+                        selectedDocIndices.add(index);
+                    } else {
+                        selectedDocIndices.delete(index);
+                    }
+                    updateDocSelectionUI();
+                    loadDocNotes(); 
+                } else {
+                    openDocReader(note.title, note.content);
+                }
             });
 
-            docList.appendChild(li);
+            if (!isDocSelectMode) {
+                const deleteBtn = card.querySelector('.delete-doc-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showCustomConfirm(`Delete the document "${note.title}"?`, async () => {
+                            const noteId = docNotes[currentClass][index].id;
+                            await supabase.from('notes').delete().eq('id', noteId);
+                            docNotes[currentClass].splice(index, 1);
+                            loadDocNotes();
+                        });
+                    });
+                }
+            }
+
+            docNotesGrid.appendChild(card);
         });
     }
 }
 
+// --- DOCUMENT SELECTION & DELETION LOGIC ---
+toggleSelectDocsBtn.addEventListener("click", () => {
+    isDocSelectMode = !isDocSelectMode;
+    selectedDocIndices.clear(); 
+    if (isDocSelectMode) {
+        toggleSelectDocsBtn.innerText = "Cancel Selection"; toggleSelectDocsBtn.style.color = "#EF4444"; toggleSelectDocsBtn.style.borderColor = "#EF4444";
+    } else {
+        toggleSelectDocsBtn.innerText = "Select PDFs"; toggleSelectDocsBtn.style.color = ""; toggleSelectDocsBtn.style.borderColor = "";
+    }
+    updateDocSelectionUI(); 
+    loadDocNotes(); 
+});
+
+function updateDocSelectionUI() {
+    if (selectedDocIndices.size > 0) {
+        startReelBtn.innerText = `▶ START REEL (${selectedDocIndices.size} Selected)`;
+        dynamicDocActionBar.classList.remove("hidden");
+        deleteSelectedDocsBtn.innerText = `Delete (${selectedDocIndices.size})`;
+    } else {
+        startReelBtn.innerText = `▶ START REEL`; 
+        dynamicDocActionBar.classList.add("hidden");
+    }
+}
+
+deleteSelectedDocsBtn.addEventListener("click", () => {
+    if (selectedDocIndices.size > 0) {
+        showCustomConfirm(`Delete ${selectedDocIndices.size} selected PDF(s)?`, async () => {
+            const indicesToDelete = Array.from(selectedDocIndices).sort((a, b) => b - a);
+            const idsToDelete = indicesToDelete.map(index => docNotes[currentClass][index].id);
+            
+            await supabase.from('notes').delete().in('id', idsToDelete);
+            indicesToDelete.forEach(index => docNotes[currentClass].splice(index, 1));
+            
+            toggleSelectDocsBtn.click(); 
+        });
+    }
+});
+
+// --- DOCUMENT READER MODAL LOGIC ---
+function openDocReader(title, content) {
+    readerTitle.innerText = title;
+    readerContent.innerText = content;
+    docReaderModal.classList.remove("hidden");
+}
+
+closeReaderBtn.addEventListener("click", () => {
+    docReaderModal.classList.add("hidden");
+});
 
 // --- PICTURE NOTES LOGIC ---
 const pictureNotesList = document.getElementById("picture-notes-list");
@@ -808,8 +907,12 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
             notesToRead = textNotes[currentClass] || [];
         }
     } else if (navDocNotes.classList.contains("active")) {
-        // If they are in the Document Notes tab, read the PDFs!
-        notesToRead = docNotes[currentClass] || [];
+        // Read selected PDFs, or all PDFs if nothing is selected
+        if (isDocSelectMode && selectedDocIndices.size > 0) {
+            notesToRead = Array.from(selectedDocIndices).map(index => docNotes[currentClass][index]);
+        } else {
+            notesToRead = docNotes[currentClass] || [];
+        }
     }
 
     if (notesToRead.length === 0) { 
@@ -827,9 +930,11 @@ document.getElementById('start-reel-btn').addEventListener('click', async () => 
         speechInstance = new SpeechSynthesisUtterance(cleanScript);
         speechInstance.rate = 1.2;
         
+        // --- THE MOBILE FIX: Force the phone to use a local voice ---
         const voices = window.speechSynthesis.getVoices();
         const localVoice = voices.find(v => v.localService === true && v.lang.startsWith('en'));
         if (localVoice) speechInstance.voice = localVoice;
+        // -----------------------------------------------------------
         
         speechInstance.onboundary = (event) => {
             if (event.name === 'word') {

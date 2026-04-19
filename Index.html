@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 
-   <body>
+<body>
     <div class="container dark-container" id="auth-container" style="max-width: 400px; margin: 100px auto; text-align: center;">
         <div class="dark-modal-box" style="width: 100%; padding: 40px;">
             <div class="card-icon" style="display: inline-flex; margin-bottom: 20px;">
@@ -23,7 +23,6 @@
             <p class="subtitle" id="auth-subtitle" style="margin-bottom: 30px;">Sign in to sync your notes to the cloud.</p>
             
             <input type="text" id="auth-username" class="dark-input full-width hidden" placeholder="Your Name (e.g., Lorenzo)" style="margin-bottom: 15px;">
-            
             <input type="email" id="auth-email" class="dark-input full-width" placeholder="Email address" style="margin-bottom: 15px;">
             <input type="password" id="auth-password" class="dark-input full-width" placeholder="Password" style="margin-bottom: 20px;">
             
@@ -55,13 +54,11 @@
         </div>
     </header>
 
-
     <div class="container dark-container hidden" id="main-menu">
-  
         <div class="dashboard-header" style="align-items: flex-start; margin-bottom: 30px;">
             <div class="header-left">
                 <p style="color: #38BDF8; font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px;">Dashboard</p>
-                <h1 class="glow-text" style="font-size: 2.2rem; margin-bottom: 5px;">Welcome back, <span id="welcome-username" style="color: #38BDF8;">Lorenzo</span></h1>
+                <h1 class="glow-text" style="font-size: 2.2rem; margin-bottom: 5px;">Welcome back, <span id="welcome-username" style="color: #38BDF8;"></span></h1>
                 <p class="subtitle" style="font-size: 1rem;">Select a subject to manage contents or start the AI reel.</p>
             </div>
             <div class="action-group" id="default-actions" style="margin-top: 10px;">
@@ -123,8 +120,21 @@
                 </div>
             </div>
             <h2 style="margin-top: 0; color: #F8FAFC; font-size: 1.5rem;">Check your inbox!</h2>
-            <p style="color: #94A3B8; margin-bottom: 30px; font-size: 0.95rem; line-height: 1.5;">We just sent a confirmation link to your email. Tap that link to verify your account, then log in here type shi.</p>
+            <p style="color: #94A3B8; margin-bottom: 30px; font-size: 0.95rem; line-height: 1.5;">We just sent a confirmation link to your email. Tap that link to verify your account, then log in here.</p>
             <button id="close-email-modal" class="btn-primary full-width" style="padding: 12px; font-size: 1rem;">Got it, thanks!</button>
+        </div>
+    </div>
+
+    <div id="doc-reader-modal" class="dark-overlay hidden" style="z-index: 10000;">
+        <div class="dark-modal-box" style="max-width: 800px; width: 90%; height: 80vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 15px; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    <h2 id="reader-title" style="margin: 0; color: #F8FAFC; font-size: 1.2rem;">Document Title</h2>
+                </div>
+                <button id="close-reader-btn" class="btn-ghost" style="padding: 8px 15px;">Close Reader</button>
+            </div>
+            <div id="reader-content" style="flex: 1; overflow-y: auto; color: #94A3B8; white-space: pre-wrap; font-size: 1rem; line-height: 1.6; padding-right: 10px;"></div>
         </div>
     </div>
 
@@ -135,7 +145,8 @@
             
             <div class="sidebar-nav" style="display: flex; flex-direction: column; gap: 10px; flex-grow: 1;">
                 <button class="nav-item active" id="nav-text-notes">Text Notes</button>
-                <button class="nav-item" id="nav-doc-notes">Document Notes</button> <button class="nav-item" id="nav-picture-notes">Picture Notes</button>
+                <button class="nav-item" id="nav-doc-notes">Document Notes</button>
+                <button class="nav-item" id="nav-picture-notes">Picture Notes</button>
             </div>
 
             <div class="sidebar-footer" style="margin-top: auto; display: flex; flex-direction: column; gap: 15px;">
@@ -168,16 +179,22 @@
             </div>
 
             <div id="view-doc-notes" class="content-view hidden">
-                <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 20px;">Document Notes</h2>
-                <p style="color: #94A3B8; margin-bottom: 15px;">Upload PDFs or Presentations. We'll extract the text so the AI Tutor can read it to you.</p>
+                <h2 style="margin-top: 0; color: #F8FAFC; margin-bottom: 10px;">Document Notes</h2>
+                <p style="color: #94A3B8; margin-bottom: 20px;">Upload PDFs or Presentations. We'll extract the text so the AI Tutor can read it to you.</p>
                 
-                <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <input type="file" id="doc-upload-input" accept="application/pdf" multiple class="dark-input" style="display: none;">
-                    <button id="trigger-doc-upload" class="btn-primary" style="padding: 15px 25px;">Upload PDFs (Max 5)</button>
-                    <span id="doc-upload-status" style="color: #38BDF8; font-size: 0.9rem; font-weight: bold;"></span>
+                    <button id="trigger-doc-upload" class="btn-primary" style="padding: 12px 24px;">Upload PDFs (Max 5)</button>
+                    <button id="toggle-select-docs" class="btn-ghost" style="padding: 12px 24px;">Select PDFs</button>
+                    
+                    <div id="dynamic-doc-action-bar" class="hidden" style="display: flex; gap: 10px;">
+                        <button id="delete-selected-docs" class="btn-ghost-danger" style="padding: 12px 24px;">Delete Selected</button>
+                    </div>
                 </div>
                 
-                <ul id="doc-notes-list" class="dark-list"></ul>
+                <span id="doc-upload-status" style="color: #38BDF8; font-size: 0.9rem; font-weight: bold; display: block; margin-top: 15px; margin-bottom: 15px;"></span>
+                
+                <div id="doc-notes-grid" class="doc-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;"></div>
             </div>
 
             <div id="view-picture-notes" class="content-view hidden">
@@ -211,9 +228,7 @@
         <div id="reel-text-overlay">LOADING...</div>
     </div>
 
-   
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-   
-    <script src="script.js?v=3"></script>
+    <script src="script.js?v=4"></script>
 </body>
 </html>
