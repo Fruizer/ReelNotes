@@ -21,3 +21,4 @@ ReelNotes is a modern, cloud-synced web application that transforms traditional 
 ReelNotes is currently optimized as a web application, but the vision doesn't stop here. 
 * **Native Mobile App:** A fully dedicated mobile application for iOS and Android is currently in the planning phase, bringing the AI Reel experience natively to your pocket.
 * **Advanced AI Summaries:** Auto-generating flashcards and quizzes from uploaded notes.
+##
